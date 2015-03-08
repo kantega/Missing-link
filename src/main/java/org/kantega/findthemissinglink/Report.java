@@ -1,5 +1,7 @@
 package org.kantega.findthemissinglink;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 
 public class Report {
@@ -29,5 +31,17 @@ public class Report {
 
     public Set<String> getMethodsReferenced() {
         return methodsReferenced;
+    }
+
+    public Collection<String> getClassesMissing() {
+        Set<String> missingClasses = new HashSet<>(classesReferenced);
+        missingClasses.removeAll(classesVisited);
+        return missingClasses;
+    }
+
+    public Collection<String> getMethodsMissing() {
+        Set<String> missingMethods = new HashSet<>(methodsReferenced);
+        missingMethods.removeAll(methodsVisited);
+        return missingMethods;
     }
 }

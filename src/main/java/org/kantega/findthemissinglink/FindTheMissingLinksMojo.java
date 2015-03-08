@@ -38,7 +38,8 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
         }
         try {
             Report report = new ClassFileVisitor().generateReportForJar(paths);
-            report.getClassesReferenced();
+
+
         } catch (IOException e) {
             e.printStackTrace();
         }
