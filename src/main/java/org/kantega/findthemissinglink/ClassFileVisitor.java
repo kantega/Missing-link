@@ -9,6 +9,7 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static java.util.Arrays.asList;
@@ -23,31 +24,28 @@ public class ClassFileVisitor {
     private final Set<String> ignoredClasses = new HashSet<>(asList("I", "V", "Z", "B", "C", "S", "D", "F", "J",
             "[I", "V", "[Z", "[B", "[C", "[S", "[D", "[F", "[J"));
 
-    public static void main(String[] args) throws IOException {
-        Report report = new ClassFileVisitor().generateReportForJar("/home/marv/.m2/repository/org/kantega/openaksess/openaksess-core/7.8.18/openaksess-core-7.8.18.jar");
-        report.getClassesReferenced();
-    }
+    public Report generateReportForJar(List<String> jarfiles) throws IOException {
+        for (String jarfile : jarfiles) {
+            URI uri = URI.create("jar:file:" + jarfile);
+            try (FileSystem zipfs = FileSystems.newFileSystem(uri, Collections.<String, Object>emptyMap())) {
+                for (final Path path : zipfs.getRootDirectories()) {
+                    Files.walkFileTree(path, Collections.<FileVisitOption>emptySet(), Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
+                        @Override
+                        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                            if(file.getFileName().toString().endsWith(".class")){
+                                try(InputStream is = Files.newInputStream(file)){
+                                    ClassReader cr = new ClassReader( is );
+                                    SignatureVisitor v = new SignatureVisitor();
+                                    cr.accept( v, 0 );
+                                }
 
-    public Report generateReportForJar(String jarfile) throws IOException {
-        URI uri = URI.create("jar:file:" + jarfile);
-        try (FileSystem zipfs = FileSystems.newFileSystem(uri, Collections.<String, Object>emptyMap())) {
-            for (final Path path : zipfs.getRootDirectories()) {
-                Files.walkFileTree(path, Collections.<FileVisitOption>emptySet(), Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        if(file.getFileName().toString().endsWith(".class")){
-                            try(InputStream is = Files.newInputStream(file)){
-                                ClassReader cr = new ClassReader( is );
-                                SignatureVisitor v = new SignatureVisitor();
-                                cr.accept( v, 0 );
                             }
-
+                            return FileVisitResult.CONTINUE;
                         }
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
-            }
+                    });
+                }
 
+            }
         }
         return new Report(classesVisited, classesReferenced, methodsVisited, methodsReferenced);
     }
