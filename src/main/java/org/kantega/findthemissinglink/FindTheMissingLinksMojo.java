@@ -12,6 +12,7 @@ import org.apache.maven.project.MavenProject;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -38,10 +39,10 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
         }
         try {
             Report report = new ClassFileVisitor().generateReportForJar(paths);
+            getLog().info(report.getMethodsMissing().toString());
 
-
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (URISyntaxException | IOException e) {
+            throw new MojoExecutionException("IO-problems", e);
         }
     }
 }

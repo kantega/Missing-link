@@ -1,55 +1,75 @@
 package org.kantega.findthemissinglink;
 
 import org.objectweb.asm.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static java.util.Arrays.asList;
 
 public class ClassFileVisitor {
+    private static final Logger log = LoggerFactory.getLogger(ClassFileVisitor.class);
+
     private final Set<String> classesVisited = new HashSet<>();
     private final Set<String> classesReferenced = new HashSet<>();
     private final Set<String> methodsReferenced = new HashSet<>();
     private final Set<String> methodsVisited = new HashSet<>();
+    private final Map<String, List<String>> methodsByClass = new HashMap<>();
+    private final Map<String, String> classParents = new HashMap<>();
 
     // Reference to primitives
     private final Set<String> ignoredClasses = new HashSet<>(asList("I", "V", "Z", "B", "C", "S", "D", "F", "J",
             "[I", "[Z", "[B", "[C", "[S", "[D", "[F", "[J"));
 
-    public Report generateReportForJar(List<String> jarfiles) throws IOException {
+    public ClassFileVisitor() throws IOException, URISyntaxException {
+        List<String> bootClasspath = getBootClasspath();
+        Report bootReport = generateReportForJar(bootClasspath);
+        classesVisited.addAll(bootReport.getClassesVisited());
+        methodsVisited.addAll(bootReport.getMethodsVisited());
+    }
+
+    public Report generateReportForJar(List<String> jarfiles) throws IOException, URISyntaxException {
         for (String jarfile : jarfiles) {
-            URI uri = URI.create("jar:file:" + jarfile);
-            try (FileSystem zipfs = FileSystems.newFileSystem(uri, Collections.<String, Object>emptyMap())) {
-                for (final Path path : zipfs.getRootDirectories()) {
-                    Files.walkFileTree(path, Collections.<FileVisitOption>emptySet(), Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
-                        @Override
-                        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                            if(file.getFileName().toString().endsWith(".class")){
-                                try(InputStream is = Files.newInputStream(file)){
-                                    ClassReader cr = new ClassReader( is );
-                                    SignatureVisitor v = new SignatureVisitor();
-                                    cr.accept( v, 0 );
+            if (jarfile.endsWith(".jar")) {
+                URI uri = URI.create("jar:file:" + jarfile);
+                try (FileSystem zipfs = FileSystems.newFileSystem(uri, Collections.<String, Object>emptyMap())) {
+                    for (final Path path : zipfs.getRootDirectories()) {
+                        Files.walkFileTree(path, Collections.<FileVisitOption>emptySet(), Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
+                            @Override
+                            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                                if (file.getFileName().toString().endsWith(".class")) {
+                                    try (InputStream is = Files.newInputStream(file)) {
+                                        ClassReader cr = new ClassReader(is);
+                                        SignatureVisitor v = new SignatureVisitor();
+                                        cr.accept(v, 0);
+                                    }
+
                                 }
-
+                                return FileVisitResult.CONTINUE;
                             }
-                            return FileVisitResult.CONTINUE;
-                        }
-                    });
-                }
+                        });
+                    }
 
+                } catch (Exception e){
+                    // woops
+                    log.warn("Woops", e);
+                }
             }
         }
+        handleInheritance();
         return new Report(classesVisited, classesReferenced, methodsVisited, methodsReferenced);
     }
 
+    private void handleInheritance() {
+        // add mapping to parent methods
+    }
 
     private class SignatureVisitor extends ClassVisitor {
         private String className;
@@ -62,14 +82,19 @@ public class ClassFileVisitor {
                           String[] interfaces) {
             className = name;
             classesVisited.add(name);
-            addReferencedClassIfNotIgnored(superName);
+            if (superName != null) {
+                addReferencedClassIfNotIgnored(superName);
+                classParents.put(className, superName);
+            }
             if(interfaces.length > 0){
                 addReferencedClassesIfNotIgnored(interfaces);
             }
         }
 
         public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-            methodsVisited.add(className + "." + name + desc);
+            String method = name + desc;
+            methodsVisited.add(className + "." + method);
+            addClassMethodMapping(className, method);
             if (exceptions != null && exceptions.length > 0) {
                 addReferencedClassesIfNotIgnored(exceptions);
             }
@@ -259,6 +284,15 @@ public class ClassFileVisitor {
         }
     }
 
+    private void addClassMethodMapping(String className, String method) {
+        List<String> methodsForClass = methodsByClass.get(className);
+        if(methodsForClass == null){
+            methodsForClass = new LinkedList<>();
+            methodsByClass.put(className, methodsForClass);
+        }
+        methodsForClass.add(method);
+    }
+
     private boolean notIgnoredClass(String classname) {
         return !ignoredClasses.contains(classname) && !classname.startsWith("java/");
     }
@@ -277,5 +311,31 @@ public class ClassFileVisitor {
             classname = classname.substring(3, classnameReference.length() - 1);
         }
         return classname;
+    }
+
+    // From animal-sniffer/java-boot-classpath-detector/src/main/java/org/codehaus/mojo/animal_sniffer/jbcpd/ShowClassPath.java
+    public List<String> getBootClasspath(){
+        String cp = System.getProperty("sun.boot.class.path");
+        if (cp != null) {
+            return Arrays.asList(cp.split(":"));
+        }
+        cp = System.getProperty("java.boot.class.path");
+        if (cp != null) {
+            return Arrays.asList(cp.split(":"));
+        }
+        Enumeration i = System.getProperties().propertyNames();
+        String name = null;
+        while (i.hasMoreElements()) {
+            String temp = (String) i.nextElement();
+            if (temp.contains(".boot.class.path")) {
+                if (name == null) {
+                    name = temp;
+                } else {
+                    System.err.println("Cannot auto-detect boot class path " + System.getProperty("java.version"));
+                    System.exit(1);
+                }
+            }
+        }
+        return Arrays.asList(name.split(":"));
     }
 }
