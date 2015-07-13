@@ -15,7 +15,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.Set;
 
 import static java.util.Collections.singletonList;
@@ -29,10 +28,10 @@ public class ClassFileVisitorTest {
         String filename = "asm-all-5.0.3.jar";
         File jarFile = getJarFile(asmUrl, filename);
         Report report = new ClassFileVisitor().generateReportForJar(singletonList(jarFile.getAbsolutePath()));
-        Collection<String> methodsMissing = report.getMethodsMissing();
+        Set<String> methodsMissing = report.getMethodsMissing();
         writeLines("methodsvisited.txt", report.getMethodsVisited());
         writeLines("classesvisited.txt", report.getClassesVisited());
-        writeLines("missing.txt", new LinkedHashSet<>(methodsMissing));
+        writeLines("missing.txt", methodsMissing);
         assertThat(methodsMissing, is((Collection<String>)Collections.<String>emptyList()));
     }
 

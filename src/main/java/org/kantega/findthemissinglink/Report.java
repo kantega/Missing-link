@@ -39,7 +39,7 @@ public class Report {
         return missingClasses;
     }
 
-    public Collection<String> getMethodsMissing() {
+    public Set<String> getMethodsMissing() {
         Set<String> missingMethods = new HashSet<>(methodsReferenced);
         missingMethods.removeAll(methodsVisited);
         return missingMethods;

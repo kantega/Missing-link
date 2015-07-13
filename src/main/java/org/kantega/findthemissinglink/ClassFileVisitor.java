@@ -51,8 +51,12 @@ public class ClassFileVisitor {
 
 
     // Reference to primitives
-    private final Set<String> ignoredClasses = new HashSet<>(asList("I", "V", "Z", "B", "C", "S", "D", "F", "J",
-            "[I", "[Z", "[B", "[C", "[S", "[D", "[F", "[J"));
+    private final Set<String> ignoredClasses = new HashSet<>(
+            asList(
+                    "I", "V", "Z", "B", "C", "S", "D", "F", "J",
+                    "[I", "[Z", "[B", "[C", "[S", "[D", "[F", "[J",
+                    "[[I", "[[Z", "[[B", "[[C", "[[S", "[[D", "[[F", "[[J"
+            ));
 
     public ClassFileVisitor() throws IOException, URISyntaxException {
         List<String> bootClasspath = getBootClasspath();
@@ -185,7 +189,7 @@ public class ClassFileVisitor {
                 @Override
                 public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
                     if (notIgnoredClass(owner)) {
-                        methodsReferenced.add(owner + "." + name + desc);
+                        methodsReferenced.add(normalizeClassName(owner) + "." + name + desc);
                     }
                     super.visitMethodInsn(opcode, owner, name, desc, itf);
                 }
