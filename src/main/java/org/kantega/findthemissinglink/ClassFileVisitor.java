@@ -1,11 +1,9 @@
 package org.kantega.findthemissinglink;
 
 import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -35,8 +33,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
+import static java.util.Objects.nonNull;
 
 public class ClassFileVisitor {
     private static final Logger log = LoggerFactory.getLogger(ClassFileVisitor.class);
@@ -96,10 +96,13 @@ public class ClassFileVisitor {
     private void handleInheritance(String parent) {
         Set<String> superMethods = methodsByClass.get(parent);
         List<String> subclasses = subclassesByParent.get(parent);
-        if (subclasses != null) {
+        if (nonNull(subclasses)) {
             for (String subclass : subclasses) {
-                for (String superMethod : superMethods) {
-                    methodsVisited.add(subclass + "." + superMethod);
+                if (nonNull(superMethods)) {
+                    methodsVisited.addAll(superMethods
+                            .stream()
+                            .map(superMethod -> subclass + "." + superMethod)
+                            .collect(Collectors.toList()));
                 }
                 handleInheritance(subclass);
             }
@@ -123,6 +126,9 @@ public class ClassFileVisitor {
             registerInheritance(className, superName);
             if(interfaces.length > 0){
                 addReferencedClassesIfNotIgnored(interfaces);
+                for (String implementedInterface : interfaces) {
+                    registerInheritance(className, implementedInterface);
+                }
             }
         }
 
@@ -140,15 +146,6 @@ public class ClassFileVisitor {
                 addReferencedClassesIfNotIgnored(exceptions);
             }
             return new MethodVisitor(Opcodes.ASM5) {
-                @Override
-                public void visitParameter(String name, int access) {
-                    super.visitParameter(name, access);
-                }
-
-                @Override
-                public AnnotationVisitor visitAnnotationDefault() {
-                    return super.visitAnnotationDefault();
-                }
 
                 @Override
                 public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
@@ -158,6 +155,7 @@ public class ClassFileVisitor {
 
                 @Override
                 public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String desc, boolean visible) {
+                    addReferencedClassIfNotIgnored(desc);
                     return super.visitTypeAnnotation(typeRef, typePath, desc, visible);
                 }
 
@@ -165,11 +163,6 @@ public class ClassFileVisitor {
                 public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
                     addReferencedClassIfNotIgnored(desc);
                     return super.visitParameterAnnotation(parameter, desc, visible);
-                }
-
-                @Override
-                public void visitAttribute(Attribute attr) {
-                    super.visitAttribute(attr);
                 }
 
                 @Override
@@ -194,24 +187,9 @@ public class ClassFileVisitor {
                 }
 
                 @Override
-                public void visitInvokeDynamicInsn(String name, String desc, Handle bsm, Object... bsmArgs) {
-                    super.visitInvokeDynamicInsn(name, desc, bsm, bsmArgs);
-                }
-
-                @Override
-                public AnnotationVisitor visitLocalVariableAnnotation(int typeRef, TypePath typePath, Label[] start, Label[] end, int[] index, String desc, boolean visible) {
-                    return super.visitLocalVariableAnnotation(typeRef, typePath, start, end, index, desc, visible);
-                }
-
-                @Override
                 public void visitLocalVariable(String name, String desc, String signature, Label start, Label end, int index) {
                     addReferencedClassIfNotIgnored(desc);
                     super.visitLocalVariable(name, desc, signature, start, end, index);
-                }
-
-                @Override
-                public AnnotationVisitor visitTryCatchAnnotation(int typeRef, TypePath typePath, String desc, boolean visible) {
-                    return super.visitTryCatchAnnotation(typeRef, typePath, desc, visible);
                 }
 
                 @Override
@@ -222,15 +200,6 @@ public class ClassFileVisitor {
                     super.visitTryCatchBlock(start, end, handler, type);
                 }
 
-                @Override
-                public AnnotationVisitor visitInsnAnnotation(int typeRef, TypePath typePath, String desc, boolean visible) {
-                    return super.visitInsnAnnotation(typeRef, typePath, desc, visible);
-                }
-
-                @Override
-                public void visitMultiANewArrayInsn(String desc, int dims) {
-                    super.visitMultiANewArrayInsn(desc, dims);
-                }
             };
         }
 
@@ -242,73 +211,7 @@ public class ClassFileVisitor {
                     addReferencedClassIfNotIgnored(desc);
                     return super.visitAnnotation(desc, visible);
                 }
-
-                @Override
-                public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String desc, boolean visible) {
-                    return super.visitTypeAnnotation(typeRef, typePath, desc, visible);
-                }
-
-                @Override
-                public void visitAttribute(Attribute attr) {
-                    super.visitAttribute(attr);
-                }
             };
-        }
-
-        @Override
-        public void visitOuterClass(String owner, String name, String desc) {
-            super.visitOuterClass(owner, name, desc);
-        }
-
-        @Override
-        public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-            return new AnnotationVisitor(Opcodes.ASM5) {
-                @Override
-                public void visit(String name, Object value) {
-                    super.visit(name, value);
-                }
-
-                @Override
-                public void visitEnum(String name, String desc, String value) {
-                    super.visitEnum(name, desc, value);
-                }
-
-                @Override
-                public AnnotationVisitor visitAnnotation(String name, String desc) {
-                    return super.visitAnnotation(name, desc);
-                }
-            };
-        }
-
-        @Override
-        public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String desc, boolean visible) {
-            return new AnnotationVisitor(Opcodes.ASM5) {
-                @Override
-                public void visit(String name, Object value) {
-                    super.visit(name, value);
-                }
-
-                @Override
-                public void visitEnum(String name, String desc, String value) {
-                    super.visitEnum(name, desc, value);
-                }
-
-                @Override
-                public AnnotationVisitor visitAnnotation(String name, String desc) {
-                    return super.visitAnnotation(name, desc);
-                }
-
-                @Override
-                public AnnotationVisitor visitArray(String name) {
-                    return super.visitArray(name);
-                }
-
-            };
-        }
-
-        @Override
-        public void visitAttribute(Attribute attr) {
-            super.visitAttribute(attr);
         }
 
         private void addReferencedClassIfNotIgnored(String classnameReference) {
@@ -326,16 +229,17 @@ public class ClassFileVisitor {
     }
 
     private void addClassMethodMapping(String className, String method) {
-        Set<String> methodsForClass = methodsByClass.get(className);
-        if(methodsForClass == null){
-            methodsForClass = new HashSet<>();
-            methodsByClass.put(className, methodsForClass);
-        }
+        Set<String> methodsForClass = methodsByClass.computeIfAbsent(className, s -> new HashSet<>());
         methodsForClass.add(method);
     }
 
     private boolean notIgnoredClass(String classname) {
-        return !ignoredClasses.contains(classname) && !classname.startsWith("java/");
+        return !ignoredClasses.contains(classname)
+                && !classname.startsWith("java/")
+               /* && !classname.startsWith("javax/swing")
+                && !classname.startsWith("sun/awt")
+                && !classname.startsWith("com/sun/corba")
+                && !classname.startsWith("org/omg")*/;
     }
 
     /*
