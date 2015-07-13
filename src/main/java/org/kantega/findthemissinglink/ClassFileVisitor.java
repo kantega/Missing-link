@@ -103,6 +103,10 @@ public class ClassFileVisitor {
                             .stream()
                             .map(superMethod -> subclass + "." + superMethod)
                             .collect(Collectors.toList()));
+                    Set<String> subclassMethods = methodsByClass.get(subclass);
+                    if (subclassMethods != null) {
+                        subclassMethods.addAll(superMethods);
+                    }
                 }
                 handleInheritance(subclass);
             }
