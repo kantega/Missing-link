@@ -3,13 +3,20 @@ package org.kantega.findthemissinglink;
 import org.apache.commons.io.IOUtils;
 import org.junit.Test;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Writer;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.CoreMatchers.is;
@@ -23,19 +30,19 @@ public class ClassFileVisitorTest {
         File jarFile = getJarFile(asmUrl, filename);
         Report report = new ClassFileVisitor().generateReportForJar(singletonList(jarFile.getAbsolutePath()));
         Collection<String> methodsMissing = report.getMethodsMissing();
-        try(Writer w = Files.newBufferedWriter(Paths.get("methodsvisited.txt"))){
-            for (String s : report.getMethodsVisited()) {
-                w.write(s);
-                w.write('\n');
-            }
-        }
-        try(Writer w = Files.newBufferedWriter(Paths.get("classesvisited.txt"))){
-            for (String s : report.getClassesVisited()) {
-                w.write(s);
-                w.write('\n');
-            }
-        }
+        writeLines("methodsvisited.txt", report.getMethodsVisited());
+        writeLines("classesvisited.txt", report.getClassesVisited());
+        writeLines("missing.txt", new LinkedHashSet<>(methodsMissing));
         assertThat(methodsMissing, is((Collection<String>)Collections.<String>emptyList()));
+    }
+
+    private void writeLines(String file, Set<String> content) throws IOException {
+        try(Writer w = Files.newBufferedWriter(Paths.get(file))){
+            for (String s : content) {
+                w.write(s);
+                w.write('\n');
+            }
+        }
     }
 
     private File getJarFile(String asmUrl, String filename) throws IOException {

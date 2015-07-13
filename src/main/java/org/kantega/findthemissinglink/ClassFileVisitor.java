@@ -1,6 +1,15 @@
 package org.kantega.findthemissinglink;
 
-import org.objectweb.asm.*;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.Attribute;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.Label;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.TypePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,9 +17,24 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.*;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static java.util.Arrays.asList;
 
@@ -21,8 +45,10 @@ public class ClassFileVisitor {
     private final Set<String> classesReferenced = new HashSet<>();
     private final Set<String> methodsReferenced = new HashSet<>();
     private final Set<String> methodsVisited = new HashSet<>();
-    private final Map<String, List<String>> methodsByClass = new HashMap<>();
+    private final Map<String, Set<String>> methodsByClass = new HashMap<>();
     private final Map<String, String> classParents = new HashMap<>();
+    private final Map<String, List<String>> subclassesByParent = new HashMap<>();
+
 
     // Reference to primitives
     private final Set<String> ignoredClasses = new HashSet<>(asList("I", "V", "Z", "B", "C", "S", "D", "F", "J",
@@ -63,12 +89,21 @@ public class ClassFileVisitor {
                 }
             }
         }
-        handleInheritance();
+        handleInheritance("java/lang/Object");
         return new Report(classesVisited, classesReferenced, methodsVisited, methodsReferenced);
     }
 
-    private void handleInheritance() {
-        // add mapping to parent methods
+    private void handleInheritance(String parent) {
+        Set<String> superMethods = methodsByClass.get(parent);
+        List<String> subclasses = subclassesByParent.get(parent);
+        if (subclasses != null) {
+            for (String subclass : subclasses) {
+                for (String superMethod : superMethods) {
+                    methodsVisited.add(subclass + "." + superMethod);
+                }
+                handleInheritance(subclass);
+            }
+        }
     }
 
     private class SignatureVisitor extends ClassVisitor {
@@ -84,11 +119,17 @@ public class ClassFileVisitor {
             classesVisited.add(name);
             if (superName != null) {
                 addReferencedClassIfNotIgnored(superName);
-                classParents.put(className, superName);
             }
+            registerInheritance(className, superName);
             if(interfaces.length > 0){
                 addReferencedClassesIfNotIgnored(interfaces);
             }
+        }
+
+        private void registerInheritance(String className, String superName) {
+            classParents.put(className, superName);
+            Collection<String> mapping = subclassesByParent.computeIfAbsent(superName, s -> new LinkedList<>());
+            mapping.add(className);
         }
 
         public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
@@ -285,9 +326,9 @@ public class ClassFileVisitor {
     }
 
     private void addClassMethodMapping(String className, String method) {
-        List<String> methodsForClass = methodsByClass.get(className);
+        Set<String> methodsForClass = methodsByClass.get(className);
         if(methodsForClass == null){
-            methodsForClass = new LinkedList<>();
+            methodsForClass = new HashSet<>();
             methodsByClass.put(className, methodsForClass);
         }
         methodsForClass.add(method);
