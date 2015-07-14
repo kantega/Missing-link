@@ -1,4 +1,4 @@
-package org.kantega.findthemissinglink;
+package org.kantega.missinglink.findthemissinglink;
 
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
@@ -46,7 +46,6 @@ public class ClassFileVisitor {
     private final Set<String> methodsReferenced = new HashSet<>();
     private final Set<String> methodsVisited = new HashSet<>();
     private final Map<String, Set<String>> methodsByClass = new HashMap<>();
-    private final Map<String, String> classParents = new HashMap<>();
     private final Map<String, List<String>> subclassesByParent = new HashMap<>();
 
 
@@ -144,7 +143,6 @@ public class ClassFileVisitor {
         }
 
         private void registerInheritance(String className, String superName) {
-            classParents.put(className, superName);
             Collection<String> mapping = subclassesByParent.computeIfAbsent(superName, s -> new LinkedList<>());
             mapping.add(className);
         }

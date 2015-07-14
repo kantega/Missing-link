@@ -1,4 +1,4 @@
-package org.kantega.findthemissinglink;
+package org.kantega.missinglink.findthemissinglink;
 
 import org.apache.commons.io.IOUtils;
 import org.junit.Test;

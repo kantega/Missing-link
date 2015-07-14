@@ -4,10 +4,16 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.kantega</groupId>
-    <artifactId>missing-link-maven-plugin</artifactId>
+    <groupId>org.kantega.missinglink</groupId>
+    <artifactId>missing-link</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <packaging>maven-plugin</packaging>
+
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>findthemissinglink</module>
+        <module>missing-link-maven-plugin</module>
+    </modules>
 
     <licenses>
         <license>
@@ -20,38 +26,9 @@
     <dependencies>
 
         <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-plugin-api</artifactId>
-            <version>3.2.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.plugin-tools</groupId>
-            <artifactId>maven-plugin-annotations</artifactId>
-            <version>3.2</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.codehaus.plexus</groupId>
-            <artifactId>plexus-utils</artifactId>
-            <version>3.0.8</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-core</artifactId>
-            <version>3.2.2</version>
-        </dependency>
-
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>1.7.7</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-all</artifactId>
-            <version>5.0.3</version>
         </dependency>
 
 
@@ -67,12 +44,7 @@
             <version>4.11</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.4</version>
-            <scope>test</scope>
-        </dependency>
+
     </dependencies>
 
     <build>
