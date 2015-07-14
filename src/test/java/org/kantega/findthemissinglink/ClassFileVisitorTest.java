@@ -16,8 +16,11 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Set;
 
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 
 public class ClassFileVisitorTest {
@@ -29,6 +32,28 @@ public class ClassFileVisitorTest {
         Report report = new ClassFileVisitor().generateReportForJar(singletonList(jarFile.getAbsolutePath()));
         //writeReport(report);
         assertThat(report.getMethodsMissing(), is(Collections.<String>emptySet()));
+    }
+
+    @Test
+    public void fileWithDependencyHaveMissingMethodsWhenDependencyNotIncluded() throws IOException, URISyntaxException {
+        // commons-dbcp-1.4 depends on commons-pool:commons-pool:1.5.4 and org.apache.geronimo.specs:geronimo-jta_1.1_spec:1.1.1 (optional)
+        File dbcpFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/commons-dbcp/commons-dbcp/1.4/commons-dbcp-1.4.jar", "commons-dbcp-1.4.jar");
+        Report report = new ClassFileVisitor().generateReportForJar(singletonList(dbcpFile.getAbsolutePath()));
+
+        assertThat(report.getMethodsMissing(), hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V", "javax/transaction/Transaction.getStatus()I"));
+
+        File poolFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/commons-pool/commons-pool/1.5.4/commons-pool-1.5.4.jar", "commons-pool-1.5.4.jar");
+        report = new ClassFileVisitor().generateReportForJar(asList(dbcpFile.getAbsolutePath(), poolFile.getAbsolutePath()));
+
+        assertThat(report.getMethodsMissing(), hasItems("javax/transaction/Transaction.getStatus()I"));
+        assertThat(report.getMethodsMissing(), not(hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V")));
+
+        File geronimoFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/org/apache/geronimo/specs/geronimo-jta_1.1_spec/1.1.1/geronimo-jta_1.1_spec-1.1.1.jar", "geronimo-jta_1.1_spec-1.1.1.jar");
+        report = new ClassFileVisitor().generateReportForJar(asList(dbcpFile.getAbsolutePath(), poolFile.getAbsolutePath(), geronimoFile.getAbsolutePath()));
+        Set<String> methodsMissing = report.getMethodsMissing();
+        assertThat(methodsMissing, not(hasItems("javax/transaction/Transaction.getStatus()I")));
+        assertThat(methodsMissing, not(hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V")));
+        assertThat(methodsMissing, is(Collections.<String>emptySet()));
     }
 
     private void writeReport(Report report) throws IOException {
