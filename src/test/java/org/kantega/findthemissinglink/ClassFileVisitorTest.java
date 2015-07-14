@@ -13,7 +13,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 
@@ -28,11 +27,14 @@ public class ClassFileVisitorTest {
         String filename = "asm-all-5.0.3.jar";
         File jarFile = getJarFile(asmUrl, filename);
         Report report = new ClassFileVisitor().generateReportForJar(singletonList(jarFile.getAbsolutePath()));
-        Set<String> methodsMissing = report.getMethodsMissing();
+        //writeReport(report);
+        assertThat(report.getMethodsMissing(), is(Collections.<String>emptySet()));
+    }
+
+    private void writeReport(Report report) throws IOException {
         writeLines("methodsvisited.txt", report.getMethodsVisited());
         writeLines("classesvisited.txt", report.getClassesVisited());
-        writeLines("missing.txt", methodsMissing);
-        assertThat(methodsMissing, is((Collection<String>)Collections.<String>emptyList()));
+        writeLines("missing.txt", report.getMethodsMissing());
     }
 
     private void writeLines(String file, Set<String> content) throws IOException {

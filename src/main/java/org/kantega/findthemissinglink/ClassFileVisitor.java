@@ -107,7 +107,7 @@ public class ClassFileVisitor {
                             .stream()
                             .map(superMethod -> subclass + "." + superMethod)
                             .collect(Collectors.toList()));
-                    Set<String> subclassMethods = methodsByClass.get(subclass);
+                    Set<String> subclassMethods = methodsByClass.computeIfAbsent(subclass, s -> new HashSet<>());
                     if (subclassMethods != null) {
                         subclassMethods.addAll(superMethods);
                     }
@@ -243,11 +243,7 @@ public class ClassFileVisitor {
 
     private boolean notIgnoredClass(String classname) {
         return !ignoredClasses.contains(classname)
-                && !classname.startsWith("java/")
-               /* && !classname.startsWith("javax/swing")
-                && !classname.startsWith("sun/awt")
-                && !classname.startsWith("com/sun/corba")
-                && !classname.startsWith("org/omg")*/;
+                && !classname.startsWith("java/");
     }
 
     /*
