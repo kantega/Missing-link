@@ -59,7 +59,10 @@ public class ClassFileVisitor {
             ));
 
     public ClassFileVisitor() throws IOException, URISyntaxException {
-        List<String> bootClasspath = getBootClasspath();
+        List<String> bootClasspath = getBootClasspath()
+                .stream() // sunrsasign.jar is most likely listed on boot classpath, but does not exist.
+                .filter(s -> !s.endsWith("sunrsasign.jar"))
+                .collect(Collectors.toList());
         Report bootReport = generateReportForJar(bootClasspath);
         classesVisited.addAll(bootReport.getClassesVisited());
         methodsVisited.addAll(bootReport.getMethodsVisited());
