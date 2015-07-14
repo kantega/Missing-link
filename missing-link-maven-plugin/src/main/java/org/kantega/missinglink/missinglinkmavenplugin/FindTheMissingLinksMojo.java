@@ -4,6 +4,7 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -21,40 +22,60 @@ import java.util.Set;
 
 @Mojo( name = "findmissinglinks",
         defaultPhase = LifecyclePhase.PROCESS_CLASSES,
-        requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME
+        requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME,
+        requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME
 )
 public class FindTheMissingLinksMojo extends AbstractMojo {
 
     @Parameter( defaultValue = "${project}", readonly = true )
     private MavenProject project;
 
+    /**
+     * Determines whether optional dependencies should be included when scanning the class path.
+     * Default value is true, so transitive dependencies that are marked as optional is not included
+     * if not explicitly declared.
+     */
+    @Parameter(defaultValue = "false", property = "includeOptional")
+    private boolean includeOptional;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        getLog().info("Running Find the missing link Maven plugin");
-
+        Log log = getLog();
+        log.info("Running Find the missing link Maven plugin");
+        log.info("Include optional dependencies: " + includeOptional);
         Set<Artifact> artifacts = project.getArtifacts();
         List<String> paths = new ArrayList<>(artifacts.size());
         for (Artifact dependencyArtifact : artifacts) {
-            File file = dependencyArtifact.getFile();
-            addIfJarOrWar(paths, file);
-        }
-        addIfJarOrWar(paths, project.getArtifact().getFile());
+            boolean ignoreDependency = dependencyArtifact.isOptional() && !includeOptional;
 
+            if (!ignoreDependency) {
+                File file = dependencyArtifact.getFile();
+                addIfJarOrWar(paths, file);
+            } else {
+                if(log.isDebugEnabled()){
+                    log.debug("Excluding " + dependencyArtifact);
+                }
+            }
+        }
+
+        if(log.isDebugEnabled()){
+            log.debug("Using dependencies: " + paths);
+        }
         try {
             Report report = new ClassFileVisitor().generateReportForJar(paths);
 
             Set<String> methodsMissing = report.getMethodsMissing();
             if(methodsMissing.isEmpty()){
-                getLog().info("No missing methods");
+                log.info("No missing methods");
             } else {
-                getLog().warn("Methods missing: " + methodsMissing);
+                log.warn("Methods missing: " + methodsMissing);
             }
 
             Set<String> classesMissing = report.getClassesMissing();
             if(classesMissing.isEmpty()){
-                getLog().info("No missing classes");
+                log.info("No missing classes");
             } else {
-                getLog().warn("Missing classes: " + classesMissing);
+                log.warn("Missing classes: " + classesMissing);
             }
 
         } catch (URISyntaxException | IOException e) {

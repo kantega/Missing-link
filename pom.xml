@@ -13,6 +13,7 @@
     <modules>
         <module>findthemissinglink</module>
         <module>missing-link-maven-plugin</module>
+        <module>missing-link-maven-plugin-it</module>
     </modules>
 
     <licenses>

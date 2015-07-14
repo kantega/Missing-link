@@ -4,7 +4,7 @@ import org.apache.commons.dbcp.SQLNestedException;
 
 import java.sql.SQLException;
 
-public class DBCPUser {
+public class ExceptionGetter {
     public SQLException getSQLException(){
         return new SQLNestedException("Lol", new SQLException("No reason"));
     }
