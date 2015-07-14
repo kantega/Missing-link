@@ -52,9 +52,7 @@ public class ClassFileVisitor {
     // Reference to primitives
     private final Set<String> ignoredClasses = new HashSet<>(
             asList(
-                    "I", "V", "Z", "B", "C", "S", "D", "F", "J",
-                    "[I", "[Z", "[B", "[C", "[S", "[D", "[F", "[J",
-                    "[[I", "[[Z", "[[B", "[[C", "[[S", "[[D", "[[F", "[[J"
+                    "I", "V", "Z", "B", "C", "S", "D", "F", "J"
             ));
 
     public ClassFileVisitor() throws IOException, URISyntaxException {
@@ -189,8 +187,9 @@ public class ClassFileVisitor {
 
                 @Override
                 public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-                    if (notIgnoredClass(owner)) {
-                        methodsReferenced.add(normalizeClassName(owner) + "." + name + desc);
+                    String normalizeClassName = normalizeClassName(owner);
+                    if (notIgnoredClass(normalizeClassName)) {
+                        methodsReferenced.add(normalizeClassName + "." + name + desc);
                     }
                     super.visitMethodInsn(opcode, owner, name, desc, itf);
                 }
@@ -252,13 +251,9 @@ public class ClassFileVisitor {
        Lorg/slf4j/Logger; -> org/slf4j/Logger
      */
     private String normalizeClassName(String classnameReference) {
-        String classname = classnameReference;
+        String classname = classnameReference.replace("[", "");
         if(classname.length() > 1 && classname.startsWith("L")){
-            classname = classname.substring(1, classnameReference.length() - 1);
-        } else if(classname.length() > 2 && classname.startsWith("[L")){
-            classname = classname.substring(2, classnameReference.length() - 1);
-        } else if(classname.length() > 2 && classname.startsWith("[[L")){
-            classname = classname.substring(3, classnameReference.length() - 1);
+            classname = classname.substring(1, classname.length() - 1);
         }
         return classname;
     }

@@ -32,6 +32,7 @@ public class ClassFileVisitorTest {
         Report report = new ClassFileVisitor().generateReportForJar(singletonList(jarFile.getAbsolutePath()));
         //writeReport(report);
         assertThat(report.getMethodsMissing(), is(Collections.<String>emptySet()));
+        assertThat(report.getClassesMissing(), is(Collections.<String>emptySet()));
     }
 
     @Test
@@ -45,15 +46,24 @@ public class ClassFileVisitorTest {
         File poolFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/commons-pool/commons-pool/1.5.4/commons-pool-1.5.4.jar", "commons-pool-1.5.4.jar");
         report = new ClassFileVisitor().generateReportForJar(asList(dbcpFile.getAbsolutePath(), poolFile.getAbsolutePath()));
 
-        assertThat(report.getMethodsMissing(), hasItems("javax/transaction/Transaction.getStatus()I"));
-        assertThat(report.getMethodsMissing(), not(hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V")));
+        Set<String> methodsMissing = report.getMethodsMissing();
+        Set<String> classesMissing = report.getClassesMissing();
+
+        assertThat(methodsMissing, hasItems("javax/transaction/Transaction.getStatus()I"));
+        assertThat(classesMissing, hasItems("javax/transaction/Transaction"));
+        assertThat(methodsMissing, not(hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V")));
+        assertThat(classesMissing, not(hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool")));
 
         File geronimoFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/org/apache/geronimo/specs/geronimo-jta_1.1_spec/1.1.1/geronimo-jta_1.1_spec-1.1.1.jar", "geronimo-jta_1.1_spec-1.1.1.jar");
         report = new ClassFileVisitor().generateReportForJar(asList(dbcpFile.getAbsolutePath(), poolFile.getAbsolutePath(), geronimoFile.getAbsolutePath()));
-        Set<String> methodsMissing = report.getMethodsMissing();
+
+        methodsMissing = report.getMethodsMissing();
+        classesMissing = report.getClassesMissing();
+
         assertThat(methodsMissing, not(hasItems("javax/transaction/Transaction.getStatus()I")));
         assertThat(methodsMissing, not(hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V")));
         assertThat(methodsMissing, is(Collections.<String>emptySet()));
+        assertThat(classesMissing, is(Collections.<String>emptySet()));
     }
 
     private void writeReport(Report report) throws IOException {
