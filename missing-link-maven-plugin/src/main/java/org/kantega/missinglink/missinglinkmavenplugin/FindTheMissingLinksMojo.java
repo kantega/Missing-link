@@ -1,10 +1,13 @@
 package org.kantega.missinglink.missinglinkmavenplugin;
 
+import org.apache.maven.ProjectDependenciesResolver;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -14,11 +17,11 @@ import org.kantega.missinglink.findthemissinglink.ClassFileVisitor;
 import org.kantega.missinglink.findthemissinglink.Report;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+
+import static java.util.Arrays.asList;
 
 @Mojo( name = "findmissinglinks",
         defaultPhase = LifecyclePhase.PROCESS_CLASSES,
@@ -30,38 +33,32 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
     @Parameter( defaultValue = "${project}", readonly = true )
     private MavenProject project;
 
-    /**
-     * Determines whether optional dependencies should be included when scanning the class path.
-     * Default value is true, so transitive dependencies that are marked as optional is not included
-     * if not explicitly declared.
-     */
-    @Parameter(defaultValue = "false", property = "includeOptional")
-    private boolean includeOptional;
+    @Component
+    private ProjectDependenciesResolver projectDependenciesResolver;
+
+    @Parameter( defaultValue = "${session}", readonly = true )
+    private MavenSession mavenSession;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         Log log = getLog();
         log.info("Running Find the missing link Maven plugin");
-        log.info("Include optional dependencies: " + includeOptional);
-        Set<Artifact> artifacts = project.getArtifacts();
-        List<String> paths = new ArrayList<>(artifacts.size());
-        for (Artifact dependencyArtifact : artifacts) {
-            boolean ignoreDependency = dependencyArtifact.isOptional() && !includeOptional;
 
-            if (!ignoreDependency) {
-                File file = dependencyArtifact.getFile();
-                addIfJarOrWar(paths, file);
-            } else {
-                if(log.isDebugEnabled()){
-                    log.debug("Excluding " + dependencyArtifact);
-                }
-            }
-        }
-
-        if(log.isDebugEnabled()){
-            log.debug("Using dependencies: " + paths);
-        }
         try {
+
+            List<String> scopes = asList(Artifact.SCOPE_COMPILE_PLUS_RUNTIME);
+            Set<Artifact> resolve = projectDependenciesResolver.resolve(project, scopes, scopes, mavenSession);
+
+            Set<Artifact> artifacts = project.getArtifacts();
+            List<String> paths = new ArrayList<>(artifacts.size());
+            for (Artifact dependencyArtifact : artifacts) {
+                    File file = dependencyArtifact.getFile();
+                    addIfJarOrWar(paths, file);
+            }
+
+            if(log.isDebugEnabled()){
+                log.debug("Using dependencies: " + paths);
+            }
             Report report = new ClassFileVisitor().generateReportForJar(paths);
 
             Set<String> methodsMissing = report.getMethodsMissing();
@@ -78,7 +75,7 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
                 log.warn("Missing classes: " + classesMissing);
             }
 
-        } catch (URISyntaxException | IOException e) {
+        } catch (Exception e) {
             throw new MojoExecutionException("IO-problems", e);
         }
     }

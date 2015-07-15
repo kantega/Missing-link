@@ -33,30 +33,10 @@ public class FindTheMissingLinksMojoTest {
         verifier.verifyTextInLog("Running Find the missing link Maven plugin");
         verifier.verifyTextInLog("Missing classes: ");
         verifier.verifyTextInLog("Methods missing: ");
+        verifier.verifyTextInLog("javax/servlet/ServletContextListener");
+        verifier.verifyTextInLog("javax/portlet/ActionRequest");
+        verifier.verifyTextInLog("org/apache/commons/io/FileCleaningTracker");
     }
 
-    @Test
-    public void projectWithOptionalDependenciesDefault() throws Exception {
-        String absolutePath = new File("src/test/resources/unit/optionalDepsNotDeclared").getAbsolutePath();
-        Verifier verifier  = new Verifier(absolutePath);
 
-        verifier.executeGoal("install");
-
-        verifier.verifyTextInLog("Running Find the missing link Maven plugin");
-        verifier.verifyTextInLog("Missing classes: ");
-        verifier.verifyTextInLog("Methods missing: ");
-    }
-
-    @Test
-    public void projectWithOptionalDependenciesNOTIncluded() throws Exception {
-        String absolutePath = new File("src/test/resources/unit/optionalDepsNotDeclared").getAbsolutePath();
-        Verifier verifier  = new Verifier(absolutePath);
-
-        verifier.setSystemProperty("includeOptional", "false");
-        verifier.executeGoal("install");
-
-        verifier.verifyTextInLog("Running Find the missing link Maven plugin");
-        verifier.verifyTextInLog("Missing classes: ");
-        verifier.verifyTextInLog("Methods missing: ");
-    }
 }
