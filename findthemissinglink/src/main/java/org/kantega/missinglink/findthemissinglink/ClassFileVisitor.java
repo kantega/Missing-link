@@ -51,9 +51,7 @@ public class ClassFileVisitor {
 
     // Reference to primitives
     private final Set<String> ignoredClasses = new HashSet<>(
-            asList(
-                    "I", "V", "Z", "B", "C", "S", "D", "F", "J"
-            ));
+            asList("I", "V", "Z", "B", "C", "S", "D", "F", "J"));
 
     public ClassFileVisitor() throws IOException, URISyntaxException {
         List<String> bootClasspath = getBootClasspath()
@@ -66,6 +64,10 @@ public class ClassFileVisitor {
     }
 
     public Report generateReportForJar(List<String> jarfiles) throws IOException, URISyntaxException {
+        return generateReportForJar(jarfiles, Collections.<String>emptyList());
+    }
+
+    public Report generateReportForJar(List<String> jarfiles, List<String> ignorePackages) throws IOException, URISyntaxException {
         for (String jarfile : jarfiles) {
             if (jarfile.endsWith(".jar")) {
                 URI uri = URI.create("jar:file:" + jarfile);
@@ -94,7 +96,7 @@ public class ClassFileVisitor {
             }
         }
         handleInheritance("java/lang/Object");
-        return new Report(classesVisited, classesReferenced, methodsVisited, methodsReferenced);
+        return new Report(classesVisited, classesReferenced, methodsVisited, methodsReferenced, ignorePackages);
     }
 
     private void handleInheritance(String parent) {

@@ -66,6 +66,18 @@ public class ClassFileVisitorTest {
         assertThat(classesMissing, is(Collections.<String>emptySet()));
     }
 
+    @Test
+    public void missingPackageIgnored() throws IOException, URISyntaxException {
+        // commons-dbcp-1.4 depends on commons-pool:commons-pool:1.5.4 and org.apache.geronimo.specs:geronimo-jta_1.1_spec:1.1.1 (optional)
+        File dbcpFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/commons-dbcp/commons-dbcp/1.4/commons-dbcp-1.4.jar", "commons-dbcp-1.4.jar");
+        Report report = new ClassFileVisitor().generateReportForJar(singletonList(dbcpFile.getAbsolutePath()), singletonList("javax/transaction"));
+
+        assertThat(report.getMethodsMissing(), not(hasItems("javax/transaction/Transaction.getStatus()I")));
+        assertThat(report.getMethodsMissing(), hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V"));
+
+
+    }
+
     private void writeReport(Report report) throws IOException {
         writeLines("methodsvisited.txt", report.getMethodsVisited());
         writeLines("classesvisited.txt", report.getClassesVisited());

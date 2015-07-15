@@ -5,6 +5,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.List;
+
+import static java.lang.String.join;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class FindTheMissingLinksMojoTest {
 
@@ -17,11 +25,15 @@ public class FindTheMissingLinksMojoTest {
     public void projectWithOptionalDependenciesDeclaredInPom() throws Exception {
         String absolutePath = new File("src/test/resources/unit/noerrors").getAbsolutePath();
         Verifier verifier  = new Verifier(absolutePath);
-        verifier.executeGoal( "install" );
+        verifier.executeGoal("install");
 
-        verifier.verifyTextInLog("Running Find the missing link Maven plugin");
-        verifier.verifyTextInLog("No missing methods");
-        verifier.verifyTextInLog("No missing classes");
+        String logText = getLogText(verifier);
+
+        assertThat(logText, containsString("Running Find the missing link Maven plugin"));
+        assertThat(logText, containsString("Ignoring Servlet API"));
+        assertThat(logText, containsString("Ignoring Portlet API"));
+        assertThat(logText, containsString("No missing methods"));
+        assertThat(logText, containsString("No missing classes"));
     }
 
     @Test
@@ -30,13 +42,21 @@ public class FindTheMissingLinksMojoTest {
         Verifier verifier  = new Verifier(absolutePath);
         verifier.executeGoal( "install" );
 
-        verifier.verifyTextInLog("Running Find the missing link Maven plugin");
-        verifier.verifyTextInLog("Missing classes: ");
-        verifier.verifyTextInLog("Methods missing: ");
-        verifier.verifyTextInLog("javax/servlet/ServletContextListener");
-        verifier.verifyTextInLog("javax/portlet/ActionRequest");
-        verifier.verifyTextInLog("org/apache/commons/io/FileCleaningTracker");
+        String logText = getLogText(verifier);
+        assertThat(logText, containsString("Running Find the missing link Maven plugin"));
+        assertThat(logText, containsString("Missing classes: "));
+        assertThat(logText, containsString("Methods missing: "));
+        assertThat(logText, containsString("Ignoring Servlet API"));
+        assertThat(logText, containsString("Ignoring Portlet API"));
+        assertThat(logText, containsString("org/apache/commons/io/FileCleaningTracker"));
+
+        assertThat(logText, not(containsString("javax/servlet/ServletContextListener")));
+        assertThat(logText, not(containsString("javax/portlet/ActionRequest")));
     }
 
-
+    private String getLogText(Verifier verifier) throws IOException {
+        File logFile = new File(verifier.getBasedir(), verifier.getLogFileName());
+        List<String> logLines = Files.readAllLines(logFile.toPath());
+        return join("\n", logLines);
+    }
 }
