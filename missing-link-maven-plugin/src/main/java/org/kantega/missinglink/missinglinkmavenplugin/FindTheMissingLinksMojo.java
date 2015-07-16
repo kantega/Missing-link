@@ -35,6 +35,11 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
     public static final String MISSING_CLASS_REFERENCES = "missing-classes.json";
     public static final String MISSING_METHOD_REFERENCES = "missing-methods.json";
 
+    public static final String METHOD_REFERENCED = "methods-referenced.txt";
+    public static final String CLASSES_REFERENCED = "classes-referenced.txt";
+    public static final String METHOD_VISITED = "methods-visited.txt";
+    public static final String CLASSES_VISITED = "classes-visited.txt";
+
     @Parameter( defaultValue = "${project}", readonly = true )
     private MavenProject project;
 
@@ -61,6 +66,13 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
      */
     @Parameter( defaultValue = "${project.build.directory}/missing-link")
     private File reportDirectory;
+
+    /**
+     * If this parameter is true, all classes and methods visited and referenced is written to
+     * their respetive files in the report directory.
+     */
+    @Parameter(defaultValue = "false")
+    private boolean writeSeenAndVisitedToFile;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -144,6 +156,21 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
         writeJsonToFile(classesMissing, new File(reportDirectory, MISSING_CLASS_REFERENCES));
         writeJsonToFile(methodsMissing, new File(reportDirectory, MISSING_METHOD_REFERENCES));
 
+        if(writeSeenAndVisitedToFile){
+            writeToFile(CLASSES_REFERENCED, report.getClassesReferenced());
+            writeToFile(METHOD_REFERENCED, report.getMethodsReferenced());
+            writeToFile(CLASSES_VISITED, report.getClassesVisited());
+            writeToFile(METHOD_VISITED, report.getMethodsVisited());
+        }
+    }
+
+    private void writeToFile(String targetFile, Set<String> entries) throws IOException {
+        try(BufferedWriter writer = new BufferedWriter(new FileWriter(new File(reportDirectory, targetFile)))) {
+            for (String referencedClass : entries) {
+                writer.write(referencedClass);
+                writer.newLine();
+            }
+        }
     }
 
     private void writeJsonToFile(Map<String, Set<String>> methodsMissing, File resultFile) throws IOException {
