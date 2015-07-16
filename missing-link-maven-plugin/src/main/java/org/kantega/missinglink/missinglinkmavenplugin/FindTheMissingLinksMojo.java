@@ -16,6 +16,7 @@ import org.kantega.missinglink.findthemissinglink.Report;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Mojo( name = "findmissinglinks",
@@ -66,14 +67,14 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
             List<String> ignoredPackages = getIgnoredPackages();
             Report report = new ClassFileVisitor().generateReportForJar(paths, ignoredPackages);
 
-            Set<String> methodsMissing = report.getMethodsMissing();
+            Map<String, Set<String>> methodsMissing = report.getMethodsMissing();
             if(methodsMissing.isEmpty()){
                 log.info("No missing methods");
             } else {
                 log.warn("Methods missing: " + methodsMissing);
             }
 
-            Set<String> classesMissing = report.getClassesMissing();
+            Map<String, Set<String>> classesMissing = report.getClassesMissing();
             if(classesMissing.isEmpty()){
                 log.info("No missing classes");
             } else {
