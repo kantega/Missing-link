@@ -41,11 +41,34 @@ import static java.util.Objects.nonNull;
 public class ClassFileVisitor {
     private static final Logger log = LoggerFactory.getLogger(ClassFileVisitor.class);
 
+    /**
+     * FQN of all classes visited.
+     */
     private final Set<String> classesVisited = new HashSet<>();
-    private final Set<String> classesReferenced = new HashSet<>();
-    private final Set<String> methodsReferenced = new HashSet<>();
+
+    /**
+     * FQN of all methods visited.
+     */
     private final Set<String> methodsVisited = new HashSet<>();
+
+    /**
+     * Map with all classes referenced, and the classes that referenced them.
+     */
+    private final Map<String, Set<String>> classesReferenced = new HashMap<>();
+
+    /**
+     * Map with all methods referenced, and the class and method that referenced them.
+     */
+    private final Map<String, Set<String>> methodsReferenced = new HashMap<>();
+
+    /**
+     * Methods mapped by their class.
+     */
     private final Map<String, Set<String>> methodsByClass = new HashMap<>();
+
+    /**
+     * Map with parent class as key, and all seen subclasses of this class or interface.
+     */
     private final Map<String, List<String>> subclassesByParent = new HashMap<>();
 
 
@@ -131,11 +154,11 @@ public class ClassFileVisitor {
             className = name;
             classesVisited.add(name);
             if (superName != null) {
-                addReferencedClassIfNotIgnored(superName);
+                addReferencedClassIfNotIgnored(superName, className);
             }
             registerInheritance(className, superName);
             if(interfaces.length > 0){
-                addReferencedClassesIfNotIgnored(interfaces);
+                addReferencedClassesIfNotIgnored(name, interfaces);
                 for (String implementedInterface : interfaces) {
                     registerInheritance(className, implementedInterface);
                 }
@@ -149,40 +172,41 @@ public class ClassFileVisitor {
 
         public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
             String method = name + desc;
-            methodsVisited.add(className + "." + method);
+            String classAndMethod = className + "." + method;
+            methodsVisited.add(classAndMethod);
             addClassMethodMapping(className, method);
             if (exceptions != null && exceptions.length > 0) {
-                addReferencedClassesIfNotIgnored(exceptions);
+                addReferencedClassesIfNotIgnored(classAndMethod, exceptions);
             }
             return new MethodVisitor(Opcodes.ASM5) {
 
                 @Override
                 public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-                    addReferencedClassIfNotIgnored(desc);
+                    addReferencedClassIfNotIgnored(desc, classAndMethod);
                     return super.visitAnnotation(desc, visible);
                 }
 
                 @Override
                 public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String desc, boolean visible) {
-                    addReferencedClassIfNotIgnored(desc);
+                    addReferencedClassIfNotIgnored(desc, classAndMethod);
                     return super.visitTypeAnnotation(typeRef, typePath, desc, visible);
                 }
 
                 @Override
                 public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
-                    addReferencedClassIfNotIgnored(desc);
+                    addReferencedClassIfNotIgnored(desc, classAndMethod);
                     return super.visitParameterAnnotation(parameter, desc, visible);
                 }
 
                 @Override
                 public void visitTypeInsn(int opcode, String type) {
-                    addReferencedClassIfNotIgnored(type);
+                    addReferencedClassIfNotIgnored(type, classAndMethod);
                     super.visitTypeInsn(opcode, type);
                 }
 
                 @Override
                 public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-                    addReferencedClassIfNotIgnored(desc);
+                    addReferencedClassIfNotIgnored(desc, classAndMethod);
                     super.visitFieldInsn(opcode, owner, name, desc);
                 }
 
@@ -191,21 +215,23 @@ public class ClassFileVisitor {
                 public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
                     String normalizeClassName = normalizeClassName(owner);
                     if (notIgnoredClass(normalizeClassName)) {
-                        methodsReferenced.add(normalizeClassName + "." + name + desc);
+                        String referencedMethod = normalizeClassName + "." + name + desc;
+                        Set<String> occurances = methodsReferenced.computeIfAbsent(referencedMethod, s -> new HashSet<>());
+                        occurances.add(classAndMethod);
                     }
                     super.visitMethodInsn(opcode, owner, name, desc, itf);
                 }
 
                 @Override
                 public void visitLocalVariable(String name, String desc, String signature, Label start, Label end, int index) {
-                    addReferencedClassIfNotIgnored(desc);
+                    addReferencedClassIfNotIgnored(desc, classAndMethod);
                     super.visitLocalVariable(name, desc, signature, start, end, index);
                 }
 
                 @Override
                 public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
                     if (type != null) {
-                        addReferencedClassIfNotIgnored(type);
+                        addReferencedClassIfNotIgnored(type, classAndMethod);
                     }
                     super.visitTryCatchBlock(start, end, handler, type);
                 }
@@ -214,26 +240,27 @@ public class ClassFileVisitor {
         }
 
         public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
-            addReferencedClassIfNotIgnored(desc);
+            addReferencedClassIfNotIgnored(desc, className);
             return new FieldVisitor(Opcodes.ASM5) {
                 @Override
                 public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-                    addReferencedClassIfNotIgnored(desc);
+                    addReferencedClassIfNotIgnored(desc, className);
                     return super.visitAnnotation(desc, visible);
                 }
             };
         }
 
-        private void addReferencedClassIfNotIgnored(String classnameReference) {
+        private void addReferencedClassIfNotIgnored(String classnameReference, String referencedFrom) {
             String classname = normalizeClassName(classnameReference);
             if(notIgnoredClass(classname)){
-                classesReferenced.add(classname);
+                Set<String> occurances = classesReferenced.computeIfAbsent(classname, s -> new HashSet<>());
+                occurances.add(referencedFrom);
             }
         }
 
-        private void addReferencedClassesIfNotIgnored(String... classname) {
+        private void addReferencedClassesIfNotIgnored(String referencedFrom, String... classname) {
             for (String s : classname) {
-                addReferencedClassIfNotIgnored(s);
+                addReferencedClassIfNotIgnored(s, referencedFrom);
             }
         }
     }

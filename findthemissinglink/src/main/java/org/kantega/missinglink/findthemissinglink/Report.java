@@ -2,17 +2,18 @@ package org.kantega.missinglink.findthemissinglink;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Report {
+    private final Map<String, Set<String>> classesReferenced;
+    private final Map<String, Set<String>> methodsReferenced;
     private final Set<String> classesVisited;
-    private final Set<String> classesReferenced;
     private final Set<String> methodsVisited;
-    private final Set<String> methodsReferenced;
     private final List<String> ignorePackages;
 
-    public Report(Set<String> classesVisited, Set<String> classesReferenced, Set<String> methodsVisited, Set<String> methodsReferenced, List<String> ignorePackages) {
+    public Report(Set<String> classesVisited, Map<String, Set<String>> classesReferenced, Set<String> methodsVisited, Map<String, Set<String>> methodsReferenced, List<String> ignorePackages) {
         this.classesVisited = classesVisited;
         this.classesReferenced = classesReferenced;
         this.methodsVisited = methodsVisited;
@@ -25,7 +26,7 @@ public class Report {
     }
 
     public Set<String> getClassesReferenced() {
-        return classesReferenced;
+        return classesReferenced.keySet();
     }
 
     public Set<String> getMethodsVisited() {
@@ -33,17 +34,17 @@ public class Report {
     }
 
     public Set<String> getMethodsReferenced() {
-        return methodsReferenced;
+        return methodsReferenced.keySet();
     }
 
     public Set<String> getClassesMissing() {
-        Set<String> missingClasses = new HashSet<>(classesReferenced);
+        Set<String> missingClasses = new HashSet<>(classesReferenced.keySet());
         missingClasses.removeAll(classesVisited);
         return removeIgnoredPackages(missingClasses);
     }
 
     public Set<String> getMethodsMissing() {
-        Set<String> missingMethods = new HashSet<>(methodsReferenced);
+        Set<String> missingMethods = new HashSet<>(methodsReferenced.keySet());
         missingMethods.removeAll(methodsVisited);
         return removeIgnoredPackages(missingMethods);
     }
