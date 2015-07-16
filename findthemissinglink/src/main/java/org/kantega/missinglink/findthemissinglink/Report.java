@@ -1,6 +1,6 @@
 package org.kantega.missinglink.findthemissinglink;
 
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,26 +37,36 @@ public class Report {
         return methodsReferenced.keySet();
     }
 
-    public Set<String> getClassesMissing() {
-        Set<String> missingClasses = new HashSet<>(classesReferenced.keySet());
-        missingClasses.removeAll(classesVisited);
-        return removeIgnoredPackages(missingClasses);
+    public Map<String, Set<String>> getClassesMissing() {
+        Map<String, Set<String>> missingClasses = new HashMap<>(classesReferenced);
+        Set<String> classes = missingClasses.keySet();
+        classes.removeAll(classesVisited);
+
+        Set<String> ignoredPackages = getIgnoredPackages(classes);
+        classes.removeAll(ignoredPackages);
+
+        return missingClasses;
     }
 
-    public Set<String> getMethodsMissing() {
-        Set<String> missingMethods = new HashSet<>(methodsReferenced.keySet());
-        missingMethods.removeAll(methodsVisited);
-        return removeIgnoredPackages(missingMethods);
+    public Map<String, Set<String>> getMethodsMissing() {
+        Map<String, Set<String>> missingMethods = new HashMap<>(methodsReferenced);
+        Set<String> methods = missingMethods.keySet();
+        methods.removeAll(methodsVisited);
+
+        Set<String> ignoredPackages = getIgnoredPackages(methods);
+        methods.removeAll(ignoredPackages);
+
+        return missingMethods;
     }
 
-    private Set<String> removeIgnoredPackages(Set<String> missingClasses) {
+    private Set<String> getIgnoredPackages(Set<String> missingClasses) {
         return missingClasses.stream().filter(s -> {
             for (String ignorePackage : ignorePackages) {
                 if (s.startsWith(ignorePackage)) {
-                    return false;
+                    return true;
                 }
             }
-            return true;
+            return false;
         }).collect(Collectors.toSet());
     }
 }

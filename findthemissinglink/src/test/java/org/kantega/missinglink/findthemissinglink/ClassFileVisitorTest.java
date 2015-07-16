@@ -31,8 +31,8 @@ public class ClassFileVisitorTest {
         File jarFile = getJarFile(asmUrl, filename);
         Report report = new ClassFileVisitor().generateReportForJar(singletonList(jarFile.getAbsolutePath()));
         //writeReport(report);
-        assertThat(report.getMethodsMissing(), is(Collections.<String>emptySet()));
-        assertThat(report.getClassesMissing(), is(Collections.<String>emptySet()));
+        assertThat(report.getMethodsMissing().keySet(), is(Collections.<String>emptySet()));
+        assertThat(report.getClassesMissing().keySet(), is(Collections.<String>emptySet()));
     }
 
     @Test
@@ -41,13 +41,13 @@ public class ClassFileVisitorTest {
         File dbcpFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/commons-dbcp/commons-dbcp/1.4/commons-dbcp-1.4.jar", "commons-dbcp-1.4.jar");
         Report report = new ClassFileVisitor().generateReportForJar(singletonList(dbcpFile.getAbsolutePath()));
 
-        assertThat(report.getMethodsMissing(), hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V", "javax/transaction/Transaction.getStatus()I"));
+        assertThat(report.getMethodsMissing().keySet(), hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V", "javax/transaction/Transaction.getStatus()I"));
 
         File poolFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/commons-pool/commons-pool/1.5.4/commons-pool-1.5.4.jar", "commons-pool-1.5.4.jar");
         report = new ClassFileVisitor().generateReportForJar(asList(dbcpFile.getAbsolutePath(), poolFile.getAbsolutePath()));
 
-        Set<String> methodsMissing = report.getMethodsMissing();
-        Set<String> classesMissing = report.getClassesMissing();
+        Set<String> methodsMissing = report.getMethodsMissing().keySet();
+        Set<String> classesMissing = report.getClassesMissing().keySet();
 
         assertThat(methodsMissing, hasItems("javax/transaction/Transaction.getStatus()I"));
         assertThat(classesMissing, hasItems("javax/transaction/Transaction"));
@@ -57,8 +57,8 @@ public class ClassFileVisitorTest {
         File geronimoFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/org/apache/geronimo/specs/geronimo-jta_1.1_spec/1.1.1/geronimo-jta_1.1_spec-1.1.1.jar", "geronimo-jta_1.1_spec-1.1.1.jar");
         report = new ClassFileVisitor().generateReportForJar(asList(dbcpFile.getAbsolutePath(), poolFile.getAbsolutePath(), geronimoFile.getAbsolutePath()));
 
-        methodsMissing = report.getMethodsMissing();
-        classesMissing = report.getClassesMissing();
+        methodsMissing = report.getMethodsMissing().keySet();
+        classesMissing = report.getClassesMissing().keySet();
 
         assertThat(methodsMissing, not(hasItems("javax/transaction/Transaction.getStatus()I")));
         assertThat(methodsMissing, not(hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V")));
@@ -72,8 +72,8 @@ public class ClassFileVisitorTest {
         File dbcpFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/commons-dbcp/commons-dbcp/1.4/commons-dbcp-1.4.jar", "commons-dbcp-1.4.jar");
         Report report = new ClassFileVisitor().generateReportForJar(singletonList(dbcpFile.getAbsolutePath()), singletonList("javax/transaction"));
 
-        assertThat(report.getMethodsMissing(), not(hasItems("javax/transaction/Transaction.getStatus()I")));
-        assertThat(report.getMethodsMissing(), hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V"));
+        assertThat(report.getMethodsMissing().keySet(), not(hasItems("javax/transaction/Transaction.getStatus()I")));
+        assertThat(report.getMethodsMissing().keySet(), hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V"));
 
 
     }
@@ -81,7 +81,7 @@ public class ClassFileVisitorTest {
     private void writeReport(Report report) throws IOException {
         writeLines("methodsvisited.txt", report.getMethodsVisited());
         writeLines("classesvisited.txt", report.getClassesVisited());
-        writeLines("missing.txt", report.getMethodsMissing());
+        writeLines("missing.txt", report.getMethodsMissing().keySet());
     }
 
     private void writeLines(String file, Set<String> content) throws IOException {
