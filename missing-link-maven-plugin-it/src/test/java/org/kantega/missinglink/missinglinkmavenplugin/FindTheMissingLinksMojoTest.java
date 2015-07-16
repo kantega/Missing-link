@@ -1,5 +1,6 @@
 package org.kantega.missinglink.missinglinkmavenplugin;
 
+import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,6 +54,39 @@ public class FindTheMissingLinksMojoTest {
         String classReportText = getFileContent(classReport);
         assertThat(classReportText, containsString("org/apache/commons/io/FileCleaningTracker"));
 
+        assertThat(classReportText, not(containsString("javax/servlet/ServletContextListener")));
+        assertThat(classReportText, not(containsString("javax/portlet/ActionRequest")));
+    }
+
+    @Test
+    public void projectWithOptionalDependenciesIOIgnoredSlashed() throws Exception {
+        String ignoredPackage = "org/apache/commons/io";
+        testCommonsIOWithIgnoredPackage(ignoredPackage);
+    }
+
+    @Test
+    public void projectWithOptionalDependenciesIOIgnored() throws Exception {
+        String ignoredPackage = "org.apache.commons.io";
+        testCommonsIOWithIgnoredPackage(ignoredPackage);
+    }
+
+    private void testCommonsIOWithIgnoredPackage(String ignoredPackage) throws VerificationException, IOException {
+        File rootDir = new File("src/test/resources/unit/optionalDepsIgnoreExplicitly");
+        Verifier verifier  = new Verifier(rootDir.getAbsolutePath());
+        verifier.setSystemProperty("ignoredPackage", ignoredPackage);
+        verifier.executeGoal("install");
+
+        String logText = getLogText(verifier);
+        assertThat(logText, containsString("Running Find the missing link Maven plugin"));
+        assertThat(logText, containsString("No missing methods"));
+        assertThat(logText, containsString("No missing classes"));
+        assertThat(logText, containsString("Ignoring Servlet API"));
+        assertThat(logText, containsString("Ignoring Portlet API"));
+
+        File classReport = new File(rootDir, "target/missing-link/" + FindTheMissingLinksMojo.MISSING_LINKS_REPORT);
+        String classReportText = getFileContent(classReport);
+
+        assertThat(classReportText, not(containsString("org/apache/commons/io/FileCleaningTracker")));
         assertThat(classReportText, not(containsString("javax/servlet/ServletContextListener")));
         assertThat(classReportText, not(containsString("javax/portlet/ActionRequest")));
     }

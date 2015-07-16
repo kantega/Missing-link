@@ -20,9 +20,12 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Mojo( name = "findmissinglinks",
         defaultPhase = LifecyclePhase.PROCESS_CLASSES,
@@ -73,6 +76,13 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
      */
     @Parameter(defaultValue = "false")
     private boolean writeSeenAndVisitedToFile;
+
+    /**
+     * Classes and methods starting with any of these packages will not be reported as missing.
+     * Both «/» and «.» may be used as package separator.
+     */
+    @Parameter
+    private List<String> ignoredPackages = Collections.emptyList();
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -180,14 +190,16 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
     }
 
     private List<String> getIgnoredPackages() {
-        List<String> ignoredPackages = new ArrayList<>();
+        Set<String> ignoredPackages = new HashSet<>(this.ignoredPackages.stream()
+                .map(s -> s.replace('.', '/'))
+                .collect(Collectors.toList()));
         if(ignoreServletApi){
             ignoredPackages.add("javax/servlet");
         }
         if(ignorePortletApi){
             ignoredPackages.add("javax/portlet");
         }
-        return ignoredPackages;
+        return new ArrayList<>(ignoredPackages);
     }
 
     private void addIfJarOrWar(List<String> paths, File file) {
