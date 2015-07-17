@@ -84,6 +84,13 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
     @Parameter
     private List<String> ignoredPackages = Collections.emptyList();
 
+    /**
+     * Ignore missing classes and methods that are referenced in the listed packages.
+     * Both «/» and «.» may be used as package separator.
+     */
+    @Parameter
+    private List<String> ignoreReferencesInPackages = Collections.emptyList();
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         Log log = getLog();
@@ -102,7 +109,7 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
                 log.debug("Using dependencies: " + paths);
             }
             List<String> ignoredPackages = getIgnoredPackages();
-            Report report = new ClassFileVisitor().generateReportForJar(paths, ignoredPackages);
+            Report report = new ClassFileVisitor().generateReportForJar(paths, ignoredPackages, ignoreReferencesInPackages);
 
             Map<String, Set<String>> methodsMissing = report.getMethodsMissing();
             if(methodsMissing.isEmpty()){

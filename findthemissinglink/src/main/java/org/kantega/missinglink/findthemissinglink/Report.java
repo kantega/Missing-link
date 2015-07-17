@@ -12,13 +12,15 @@ public class Report {
     private final Set<String> classesVisited;
     private final Set<String> methodsVisited;
     private final List<String> ignorePackages;
+    private final List<String> ignoreReferencesInPackages;
 
-    public Report(Set<String> classesVisited, Map<String, Set<String>> classesReferenced, Set<String> methodsVisited, Map<String, Set<String>> methodsReferenced, List<String> ignorePackages) {
+    public Report(Set<String> classesVisited, Map<String, Set<String>> classesReferenced, Set<String> methodsVisited, Map<String, Set<String>> methodsReferenced, List<String> ignorePackages, List<String> ignoreReferencesInPackages) {
         this.classesVisited = classesVisited;
         this.classesReferenced = classesReferenced;
         this.methodsVisited = methodsVisited;
         this.methodsReferenced = methodsReferenced;
         this.ignorePackages = ignorePackages;
+        this.ignoreReferencesInPackages = ignoreReferencesInPackages;
     }
 
     /**
@@ -53,6 +55,7 @@ public class Report {
      * @return Classes that are referenced but have not been visited, and the classes
      * where they was referenced.
      * Classes whose package starts with an entry in {@code ignoredPackages} are removed.
+     * Missing classes referenced in an entry in {@code ignoreReferencesInPackages} are removed.
      */
     public Map<String, Set<String>> getClassesMissing() {
         Map<String, Set<String>> missingClasses = new HashMap<>(classesReferenced);
@@ -62,6 +65,10 @@ public class Report {
         Set<String> ignoredPackages = getIgnoredPackages(classes);
         classes.removeAll(ignoredPackages);
 
+        if(!ignoreReferencesInPackages.isEmpty()){
+            missingClasses = removeMissingReferencesInIgnoredPackages(missingClasses);
+        }
+
         return missingClasses;
     }
 
@@ -69,6 +76,7 @@ public class Report {
      * @return Methods that are referenced but have not been visited, and the methods
      * where they was referenced.
      * Methods whose package starts with an entry in {@code ignoredPackages} are removed.
+     * Missing methods referenced in an entry in {@code ignoreReferencesInPackages} are removed.
      */
     public Map<String, Set<String>> getMethodsMissing() {
         Map<String, Set<String>> missingMethods = new HashMap<>(methodsReferenced);
@@ -78,7 +86,21 @@ public class Report {
         Set<String> ignoredPackages = getIgnoredPackages(methods);
         methods.removeAll(ignoredPackages);
 
+        if(!ignoreReferencesInPackages.isEmpty()){
+            missingMethods = removeMissingReferencesInIgnoredPackages(missingMethods);
+
+        }
         return missingMethods;
+    }
+
+
+    private Map<String, Set<String>> removeMissingReferencesInIgnoredPackages(Map<String, Set<String>> missingClasses) {
+        return missingClasses
+                .entrySet()
+                .stream()
+                .map(e -> new Reference(e.getKey(), getNonIgnoredReferenced(e.getValue())))
+                .filter(Reference::isNotEmpty)
+                .collect(Collectors.toMap(Reference::getReference, Reference::getReferencedFrom));
     }
 
     private Set<String> getIgnoredPackages(Set<String> missingClasses) {
@@ -90,5 +112,39 @@ public class Report {
             }
             return false;
         }).collect(Collectors.toSet());
+    }
+
+    private Set<String> getNonIgnoredReferenced(Set<String> references) {
+        return references.stream().filter(s -> {
+            for (String ignorePackage : ignoreReferencesInPackages) {
+                if (s.startsWith(ignorePackage)) {
+                    return false;
+                }
+            }
+            return true;
+        }).collect(Collectors.toSet());
+
+    }
+
+    private static class Reference {
+        public final String reference;
+        public final Set<String> referencedFrom;
+
+        private Reference(String reference, Set<String> referencedFrom) {
+            this.reference = reference;
+            this.referencedFrom = referencedFrom;
+        }
+
+        public String getReference() {
+            return reference;
+        }
+
+        public Set<String> getReferencedFrom() {
+            return referencedFrom;
+        }
+
+        public boolean isNotEmpty(){
+            return !referencedFrom.isEmpty();
+        }
     }
 }

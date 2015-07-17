@@ -87,10 +87,10 @@ public class ClassFileVisitor {
     }
 
     public Report generateReportForJar(List<String> jarfiles) throws IOException, URISyntaxException {
-        return generateReportForJar(jarfiles, Collections.<String>emptyList());
+        return generateReportForJar(jarfiles, Collections.<String>emptyList(), Collections.<String>emptyList());
     }
 
-    public Report generateReportForJar(List<String> jarfiles, List<String> ignorePackages) throws IOException, URISyntaxException {
+    public Report generateReportForJar(List<String> jarfiles, List<String> ignorePackages, List<String> ignoreReferencesInPackages) throws IOException, URISyntaxException {
         for (String jarfile : jarfiles) {
             if (jarfile.endsWith(".jar")) {
                 URI uri = URI.create("jar:file:" + jarfile);
@@ -119,7 +119,7 @@ public class ClassFileVisitor {
             }
         }
         handleInheritance("java/lang/Object");
-        return new Report(classesVisited, classesReferenced, methodsVisited, methodsReferenced, ignorePackages);
+        return new Report(classesVisited, classesReferenced, methodsVisited, methodsReferenced, ignorePackages, ignoreReferencesInPackages);
     }
 
     private void handleInheritance(String parent) {

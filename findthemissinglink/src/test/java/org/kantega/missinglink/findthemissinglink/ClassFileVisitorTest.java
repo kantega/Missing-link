@@ -17,6 +17,7 @@ import java.util.Collections;
 import java.util.Set;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
@@ -68,12 +69,28 @@ public class ClassFileVisitorTest {
 
     @Test
     public void missingPackageIgnored() throws IOException, URISyntaxException {
-        // commons-dbcp-1.4 depends on commons-pool:commons-pool:1.5.4 and org.apache.geronimo.specs:geronimo-jta_1.1_spec:1.1.1 (optional)
         File dbcpFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/commons-dbcp/commons-dbcp/1.4/commons-dbcp-1.4.jar", "commons-dbcp-1.4.jar");
-        Report report = new ClassFileVisitor().generateReportForJar(singletonList(dbcpFile.getAbsolutePath()), singletonList("javax/transaction"));
+        Report report = new ClassFileVisitor().generateReportForJar(singletonList(dbcpFile.getAbsolutePath()), singletonList("javax/transaction"), emptyList());
 
-        assertThat(report.getMethodsMissing().keySet(), not(hasItems("javax/transaction/Transaction.getStatus()I")));
-        assertThat(report.getMethodsMissing().keySet(), hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V"));
+        Set<String> methodsMissing = report.getMethodsMissing().keySet();
+        assertThat(methodsMissing, not(hasItems("javax/transaction/Transaction.getStatus()I")));
+        assertThat(methodsMissing, hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V"));
+
+
+    }
+
+    @Test
+    public void missingPackageIgnoredWhenIgnoreReferencesInPackagesDefined() throws IOException, URISyntaxException {
+        File dbcpFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/commons-dbcp/commons-dbcp/1.4/commons-dbcp-1.4.jar", "commons-dbcp-1.4.jar");
+        Report report = new ClassFileVisitor().generateReportForJar(singletonList(dbcpFile.getAbsolutePath()), emptyList(), singletonList("org/apache/commons/dbcp/managed"));
+
+        Set<String> methodsMissing = report.getMethodsMissing().keySet();
+        assertThat(methodsMissing, not(hasItems("javax/transaction/Transaction.getStatus()I")));
+        assertThat(methodsMissing, hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool.setMaxIdle(I)V"));
+
+        Set<String> classesMissing = report.getClassesMissing().keySet();
+        assertThat(classesMissing, not(hasItems("javax/transaction/Transaction")));
+        assertThat(classesMissing, hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool"));
 
 
     }

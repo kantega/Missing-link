@@ -91,6 +91,21 @@ public class FindTheMissingLinksMojoTest {
         assertThat(classReportText, not(containsString("javax/portlet/ActionRequest")));
     }
 
+    @Test
+    public void ignoreMissingReferencedFromIgnoredPackage() throws VerificationException, IOException {
+        File rootDir = new File("src/test/resources/unit/ignoreReferencesInPackages");
+        Verifier verifier  = new Verifier(rootDir.getAbsolutePath());
+        verifier.setSystemProperty("ignoredPackage", "org/springframework/jca");
+        verifier.executeGoal("install");
+
+
+        File classReport = new File(rootDir, "target/missing-link/" + FindTheMissingLinksMojo.MISSING_LINKS_REPORT);
+        String classReportText = getFileContent(classReport);
+
+        assertThat(classReportText, not(containsString("javax/resource/cci/Streamable")));
+        assertThat(classReportText, not(containsString("javax/resource/spi/UnavailableException")));
+    }
+
     private String getLogText(Verifier verifier) throws IOException {
         File logFile = new File(verifier.getBasedir(), verifier.getLogFileName());
         return getFileContent(logFile);
