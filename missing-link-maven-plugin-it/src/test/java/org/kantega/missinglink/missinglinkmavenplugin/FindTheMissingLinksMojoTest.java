@@ -82,6 +82,7 @@ public class FindTheMissingLinksMojoTest {
         assertThat(logText, containsString("No missing classes"));
         assertThat(logText, containsString("Ignoring Servlet API"));
         assertThat(logText, containsString("Ignoring Portlet API"));
+        assertThat(logText, containsString("Ignoring EL API"));
 
         File classReport = new File(rootDir, "target/missing-link/" + FindTheMissingLinksMojo.MISSING_LINKS_REPORT);
         String classReportText = getFileContent(classReport);

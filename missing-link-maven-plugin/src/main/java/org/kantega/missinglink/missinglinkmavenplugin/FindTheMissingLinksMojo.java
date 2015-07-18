@@ -56,6 +56,15 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
     private boolean ignoreServletApi;
 
     /**
+     * When a project depends on the EL API, it should be declared with scope «provided»,
+     * and should not be found on the build classpath.
+     * This parameter determines whether classes in package «javax.el» should be ignored.
+     * Default value is true.
+     */
+    @Parameter(defaultValue = "true")
+    private boolean ignoreELApi;
+
+    /**
      * When a project depends on the Portlet API, it should be declared with scope «provided»,
      * and should not be found on the build classpath.
      * This parameter determines whether classes in package «javax.portlet» should be ignored.
@@ -95,8 +104,7 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
     public void execute() throws MojoExecutionException, MojoFailureException {
         Log log = getLog();
         log.info("Running Find the missing link Maven plugin");
-        if(ignoreServletApi) log.info("Ignoring Servlet API");
-        if(ignorePortletApi) log.info("Ignoring Portlet API");
+
         try {
             Set<Artifact> artifacts = project.getArtifacts();
             List<String> paths = new ArrayList<>(artifacts.size());
@@ -200,11 +208,18 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
         Set<String> ignoredPackages = new HashSet<>(this.ignoredPackages.stream()
                 .map(s -> s.replace('.', '/'))
                 .collect(Collectors.toList()));
+
         if(ignoreServletApi){
+            getLog().info("Ignoring Servlet API");
             ignoredPackages.add("javax/servlet");
         }
         if(ignorePortletApi){
+            getLog().info("Ignoring Portlet API");
             ignoredPackages.add("javax/portlet");
+        }
+        if(ignoreELApi) {
+            getLog().info("Ignoring EL API");
+            ignoredPackages.add("javax/el");
         }
         return new ArrayList<>(ignoredPackages);
     }
