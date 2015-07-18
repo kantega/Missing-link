@@ -48,7 +48,7 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
 
     /**
      * Most webapplication have the Servlet API as a dependency. It should be declared with scope «provided»,
-     * and should not be found on the build classpath.
+     * and is therefore not listed as a dependency.
      * This parameter determines whether classes in package «javax.servlet» should be ignored.
      * Default value is true.
      */
@@ -57,7 +57,7 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
 
     /**
      * When a project depends on the EL API, it should be declared with scope «provided»,
-     * and should not be found on the build classpath.
+     * and therefore not listed as a dependency.
      * This parameter determines whether classes in package «javax.el» should be ignored.
      * Default value is true.
      */
@@ -66,7 +66,7 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
 
     /**
      * When a project depends on the Portlet API, it should be declared with scope «provided»,
-     * and should not be found on the build classpath.
+     * and therefore not listed as a dependency.
      * This parameter determines whether classes in package «javax.portlet» should be ignored.
      * Default value is true.
      */
