@@ -107,6 +107,20 @@ public class FindTheMissingLinksMojoTest {
         assertThat(classReportText, not(containsString("javax/resource/spi/UnavailableException")));
     }
 
+    @Test
+    public void commonsValidator() throws VerificationException, IOException {
+        File rootDir = new File("src/test/resources/unit/commonsvalidator");
+        Verifier verifier  = new Verifier(rootDir.getAbsolutePath());
+        verifier.setSystemProperty("ignoredPackage", "org/springframework/jca");
+        verifier.executeGoal("install");
+
+
+        File classReport = new File(rootDir, "target/missing-link/" + FindTheMissingLinksMojo.MISSING_LINKS_REPORT);
+        String classReportText = getFileContent(classReport);
+
+        assertThat(classReportText, containsString("org/apache/oro/text/perl/Perl5Util"));
+    }
+
     private String getLogText(Verifier verifier) throws IOException {
         File logFile = new File(verifier.getBasedir(), verifier.getLogFileName());
         return getFileContent(logFile);
