@@ -70,7 +70,7 @@ public class ClassFileVisitorTest {
     @Test
     public void missingPackageIgnored() throws IOException, URISyntaxException {
         File dbcpFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/commons-dbcp/commons-dbcp/1.4/commons-dbcp-1.4.jar", "commons-dbcp-1.4.jar");
-        Report report = new ClassFileVisitor().generateReportForJar(singletonList(dbcpFile.getAbsolutePath()), singletonList("javax/transaction"), emptyList());
+        Report report = new ClassFileVisitor().generateReportForJar(singletonList(dbcpFile.getAbsolutePath()), singletonList("javax/transaction"), emptyList(), true);
 
         Set<String> methodsMissing = report.getMethodsMissing().keySet();
         assertThat(methodsMissing, not(hasItems("javax/transaction/Transaction.getStatus()I")));
@@ -82,7 +82,7 @@ public class ClassFileVisitorTest {
     @Test
     public void missingPackageIgnoredWhenIgnoreReferencesInPackagesDefined() throws IOException, URISyntaxException {
         File dbcpFile = getJarFile("http://opensource.kantega.no/nexus/service/local/repositories/central/content/commons-dbcp/commons-dbcp/1.4/commons-dbcp-1.4.jar", "commons-dbcp-1.4.jar");
-        Report report = new ClassFileVisitor().generateReportForJar(singletonList(dbcpFile.getAbsolutePath()), emptyList(), singletonList("org/apache/commons/dbcp/managed"));
+        Report report = new ClassFileVisitor().generateReportForJar(singletonList(dbcpFile.getAbsolutePath()), emptyList(), singletonList("org/apache/commons/dbcp/managed"), true);
 
         Set<String> methodsMissing = report.getMethodsMissing().keySet();
         assertThat(methodsMissing, not(hasItems("javax/transaction/Transaction.getStatus()I")));
@@ -91,8 +91,15 @@ public class ClassFileVisitorTest {
         Set<String> classesMissing = report.getClassesMissing().keySet();
         assertThat(classesMissing, not(hasItems("javax/transaction/Transaction")));
         assertThat(classesMissing, hasItems("org/apache/commons/pool/impl/GenericKeyedObjectPool"));
+    }
 
+    @Test
+    public void annotationsIgnored() throws IOException, URISyntaxException {
+        File guavaFile = getJarFile("http://nexus.kantega.lan/service/local/repositories/central/content/com/google/guava/guava/18.0/guava-18.0.jar", "guava-18.0.jar");
+        Report report = new ClassFileVisitor().generateReportForJar(singletonList(guavaFile.getAbsolutePath()), emptyList(), emptyList(), true);
 
+        Set<String> classesMissing = report.getClassesMissing().keySet();
+        assertThat(classesMissing, not(hasItems("javax/annotation/Nullable")));
     }
 
     private void writeReport(Report report) throws IOException {

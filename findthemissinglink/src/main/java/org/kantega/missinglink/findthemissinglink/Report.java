@@ -9,18 +9,22 @@ import java.util.stream.Collectors;
 public class Report {
     private final Map<String, Set<String>> classesReferenced;
     private final Map<String, Set<String>> methodsReferenced;
+    private final Set<String> annotationsReferenced;
     private final Set<String> classesVisited;
     private final Set<String> methodsVisited;
     private final List<String> ignorePackages;
     private final List<String> ignoreReferencesInPackages;
+    private final boolean ignoreAnnotationReferences;
 
-    public Report(Set<String> classesVisited, Map<String, Set<String>> classesReferenced, Set<String> methodsVisited, Map<String, Set<String>> methodsReferenced, List<String> ignorePackages, List<String> ignoreReferencesInPackages) {
+    public Report(Set<String> classesVisited, Map<String, Set<String>> classesReferenced, Set<String> methodsVisited, Map<String, Set<String>> methodsReferenced, Set<String> annotationsReferenced, List<String> ignorePackages, List<String> ignoreReferencesInPackages, boolean ignoreAnnotationReferences) {
         this.classesVisited = classesVisited;
         this.classesReferenced = classesReferenced;
         this.methodsVisited = methodsVisited;
         this.methodsReferenced = methodsReferenced;
+        this.annotationsReferenced = annotationsReferenced;
         this.ignorePackages = ignorePackages;
         this.ignoreReferencesInPackages = ignoreReferencesInPackages;
+        this.ignoreAnnotationReferences = ignoreAnnotationReferences;
     }
 
     /**
@@ -61,6 +65,9 @@ public class Report {
         Map<String, Set<String>> missingClasses = new HashMap<>(classesReferenced);
         Set<String> classes = missingClasses.keySet();
         classes.removeAll(classesVisited);
+        if(ignoreAnnotationReferences) {
+            classes.removeAll(annotationsReferenced);
+        }
 
         Set<String> ignoredPackages = getIgnoredPackages(classes);
         classes.removeAll(ignoredPackages);

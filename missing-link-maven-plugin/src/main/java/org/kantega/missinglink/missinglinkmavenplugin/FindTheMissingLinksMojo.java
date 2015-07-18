@@ -74,6 +74,15 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
     private boolean ignorePortletApi;
 
     /**
+     * If a referenced annotation is not present on the current classpath it does not necessarily cause any problems
+     * during runtime.
+     * To include annotations in the missing references report set this option to true.
+     * Default value is true.
+     */
+    @Parameter(defaultValue = "true")
+    private boolean ignoreAnnotationReferences;
+
+    /**
      * Directory where report files will be written.
      */
     @Parameter( defaultValue = "${project.build.directory}/missing-link")
@@ -117,7 +126,7 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
                 log.debug("Using dependencies: " + paths);
             }
             List<String> ignoredPackages = getIgnoredPackages();
-            Report report = new ClassFileVisitor().generateReportForJar(paths, ignoredPackages, ignoreReferencesInPackages);
+            Report report = new ClassFileVisitor().generateReportForJar(paths, ignoredPackages, ignoreReferencesInPackages, ignoreAnnotationReferences);
 
             Map<String, Set<String>> methodsMissing = report.getMethodsMissing();
             if(methodsMissing.isEmpty()){
@@ -132,14 +141,14 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
             } else {
                 log.warn("Missing classes detected. Reports can be found in " + reportDirectory.getAbsolutePath());
             }
-            writeReport(report, classesMissing, methodsMissing);
+            writeReport(report, classesMissing, methodsMissing, ignoredPackages);
 
         } catch (Exception e) {
             throw new MojoExecutionException("IO-problems", e);
         }
     }
 
-    private void writeReport(Report report, Map<String, Set<String>> classesMissing, Map<String, Set<String>> methodsMissing) throws IOException {
+    private void writeReport(Report report, Map<String, Set<String>> classesMissing, Map<String, Set<String>> methodsMissing, List<String> ignoredPackages) throws IOException {
         reportDirectory.mkdirs();
         try(BufferedWriter writer = new BufferedWriter(new FileWriter(new File(reportDirectory, MISSING_LINKS_REPORT)))){
             writer.write("Find the missing links Maven plugin report");
@@ -148,7 +157,7 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
 
             writer.write("Packages ignored:");
             writer.newLine();
-            for (String ignoredPackage : getIgnoredPackages()) {
+            for (String ignoredPackage : ignoredPackages) {
                 writer.write("   " + ignoredPackage);
                 writer.newLine();
             }

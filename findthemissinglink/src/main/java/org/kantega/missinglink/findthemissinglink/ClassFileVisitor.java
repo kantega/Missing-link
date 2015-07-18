@@ -52,6 +52,11 @@ public class ClassFileVisitor {
     private final Set<String> methodsVisited = new HashSet<>();
 
     /**
+     * FQN of all annotations referenced.
+     */
+    private final Set<String> annotationReferenced = new HashSet<>();
+
+    /**
      * Map with all classes referenced, and the classes that referenced them.
      */
     private final Map<String, Set<String>> classesReferenced = new HashMap<>();
@@ -87,10 +92,10 @@ public class ClassFileVisitor {
     }
 
     public Report generateReportForJar(List<String> jarfiles) throws IOException, URISyntaxException {
-        return generateReportForJar(jarfiles, Collections.<String>emptyList(), Collections.<String>emptyList());
+        return generateReportForJar(jarfiles, Collections.<String>emptyList(), Collections.<String>emptyList(), false);
     }
 
-    public Report generateReportForJar(List<String> jarfiles, List<String> ignorePackages, List<String> ignoreReferencesInPackages) throws IOException, URISyntaxException {
+    public Report generateReportForJar(List<String> jarfiles, List<String> ignorePackages, List<String> ignoreReferencesInPackages, boolean ignoreAnnotationReferences) throws IOException, URISyntaxException {
         for (String jarfile : jarfiles) {
             if (jarfile.endsWith(".jar")) {
                 URI uri = URI.create("jar:file:" + jarfile);
@@ -119,7 +124,7 @@ public class ClassFileVisitor {
             }
         }
         handleInheritance("java/lang/Object");
-        return new Report(classesVisited, classesReferenced, methodsVisited, methodsReferenced, ignorePackages, ignoreReferencesInPackages);
+        return new Report(classesVisited, classesReferenced, methodsVisited, methodsReferenced, annotationReferenced, ignorePackages, ignoreReferencesInPackages, ignoreAnnotationReferences);
     }
 
     private void handleInheritance(String parent) {
@@ -168,6 +173,9 @@ public class ClassFileVisitor {
         private void registerInheritance(String className, String superName) {
             Collection<String> mapping = subclassesByParent.computeIfAbsent(superName, s -> new LinkedList<>());
             mapping.add(className);
+            if("java/lang/annotation/Annotation".equals(superName)){
+                annotationReferenced.add(className);
+            }
         }
 
         public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
@@ -182,19 +190,22 @@ public class ClassFileVisitor {
 
                 @Override
                 public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-                    addReferencedClassIfNotIgnored(desc, classAndMethod);
+                    String annotationClassName = addReferencedClassIfNotIgnored(desc, classAndMethod);
+                    annotationReferenced.add(annotationClassName);
                     return super.visitAnnotation(desc, visible);
                 }
 
                 @Override
                 public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String desc, boolean visible) {
-                    addReferencedClassIfNotIgnored(desc, classAndMethod);
+                    String annotationClassName = addReferencedClassIfNotIgnored(desc, classAndMethod);
+                    annotationReferenced.add(annotationClassName);
                     return super.visitTypeAnnotation(typeRef, typePath, desc, visible);
                 }
 
                 @Override
                 public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
-                    addReferencedClassIfNotIgnored(desc, classAndMethod);
+                    String annotationClassName = addReferencedClassIfNotIgnored(desc, classAndMethod);
+                    annotationReferenced.add(annotationClassName);
                     return super.visitParameterAnnotation(parameter, desc, visible);
                 }
 
@@ -244,18 +255,27 @@ public class ClassFileVisitor {
             return new FieldVisitor(Opcodes.ASM5) {
                 @Override
                 public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-                    addReferencedClassIfNotIgnored(desc, className);
+                    String annotationClass = addReferencedClassIfNotIgnored(desc, className);
+                    annotationReferenced.add(annotationClass);
                     return super.visitAnnotation(desc, visible);
                 }
             };
         }
 
-        private void addReferencedClassIfNotIgnored(String classnameReference, String referencedFrom) {
+        /**
+         *
+         * @param classnameReference The referenced class.
+         * @param referencedFrom where the class was referenced.
+         * @return normalized {@code classnameReference}
+         */
+        private String addReferencedClassIfNotIgnored(String classnameReference, String referencedFrom) {
             String classname = normalizeClassName(classnameReference);
             if(notIgnoredClass(classname)){
                 Set<String> occurances = classesReferenced.computeIfAbsent(classname, s -> new HashSet<>());
                 occurances.add(referencedFrom);
             }
+
+            return classname;
         }
 
         private void addReferencedClassesIfNotIgnored(String referencedFrom, String... classname) {
