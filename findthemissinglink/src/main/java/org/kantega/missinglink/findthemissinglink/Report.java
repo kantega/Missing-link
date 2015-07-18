@@ -35,10 +35,10 @@ public class Report {
     }
 
     /**
-     * @return FQN of all classes referenced by visited classes.
+     * @return FQN of all classes referenced by visited classes and where they where referenced.
      */
-    public Set<String> getClassesReferenced() {
-        return classesReferenced.keySet();
+    public Map<String, Set<String>> getClassesReferenced() {
+        return classesReferenced;
     }
 
     /**
@@ -49,10 +49,10 @@ public class Report {
     }
 
     /**
-     * @return FQN of all methods referenced in methods of visited classes
+     * @return FQN of all methods referenced in methods of visited classes and where they where referenced.
      */
-    public Set<String> getMethodsReferenced() {
-        return methodsReferenced.keySet();
+    public Map<String, Set<String>> getMethodsReferenced() {
+        return methodsReferenced;
     }
 
     /**

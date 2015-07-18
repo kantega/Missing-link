@@ -38,8 +38,8 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
     public static final String MISSING_CLASS_REFERENCES = "missing-classes.json";
     public static final String MISSING_METHOD_REFERENCES = "missing-methods.json";
 
-    public static final String METHOD_REFERENCED = "methods-referenced.txt";
-    public static final String CLASSES_REFERENCED = "classes-referenced.txt";
+    public static final String METHOD_REFERENCED = "methods-referenced.json";
+    public static final String CLASSES_REFERENCED = "classes-referenced.json";
     public static final String METHOD_VISITED = "methods-visited.txt";
     public static final String CLASSES_VISITED = "classes-visited.txt";
 
@@ -191,8 +191,8 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
         writeJsonToFile(methodsMissing, new File(reportDirectory, MISSING_METHOD_REFERENCES));
 
         if(writeSeenAndVisitedToFile){
-            writeToFile(CLASSES_REFERENCED, report.getClassesReferenced());
-            writeToFile(METHOD_REFERENCED, report.getMethodsReferenced());
+            writeJsonToFile(report.getClassesReferenced(), new File(reportDirectory, CLASSES_REFERENCED));
+            writeJsonToFile(report.getMethodsReferenced(), new File(reportDirectory, METHOD_REFERENCED));
             writeToFile(CLASSES_VISITED, report.getClassesVisited());
             writeToFile(METHOD_VISITED, report.getMethodsVisited());
         }
