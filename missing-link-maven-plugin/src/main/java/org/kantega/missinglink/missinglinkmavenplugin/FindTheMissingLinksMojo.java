@@ -12,6 +12,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
+import org.kantega.missinglink.findthemissinglink.CallTreeReport;
 import org.kantega.missinglink.findthemissinglink.ClassFileVisitor;
 import org.kantega.missinglink.findthemissinglink.Report;
 
@@ -20,6 +21,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -42,6 +44,7 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
     public static final String CLASSES_REFERENCED = "classes-referenced.json";
     public static final String METHOD_VISITED = "methods-visited.txt";
     public static final String CLASSES_VISITED = "classes-visited.txt";
+    public static final String METHOD_CALL_TREE = "call-paths.txt";
 
     @Parameter( defaultValue = "${project}", readonly = true )
     private MavenProject project;
@@ -193,12 +196,14 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
         if(writeSeenAndVisitedToFile){
             writeJsonToFile(report.getClassesReferenced(), new File(reportDirectory, CLASSES_REFERENCED));
             writeJsonToFile(report.getMethodsReferenced(), new File(reportDirectory, METHOD_REFERENCED));
+            List<CallTreeReport.CallNode> methodsMissingTree = CallTreeReport.generateCallTree(methodsMissing, report.getMethodsReferenced());
+            writeToFile(METHOD_CALL_TREE, CallTreeReport.getCallTreeAsList(methodsMissingTree));
             writeToFile(CLASSES_VISITED, report.getClassesVisited());
             writeToFile(METHOD_VISITED, report.getMethodsVisited());
         }
     }
 
-    private void writeToFile(String targetFile, Set<String> entries) throws IOException {
+    private void writeToFile(String targetFile, Collection<String> entries) throws IOException {
         try(BufferedWriter writer = new BufferedWriter(new FileWriter(new File(reportDirectory, targetFile)))) {
             for (String referencedClass : entries) {
                 writer.write(referencedClass);
@@ -207,7 +212,7 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
         }
     }
 
-    private void writeJsonToFile(Map<String, Set<String>> methodsMissing, File resultFile) throws IOException {
+    private void writeJsonToFile(Object methodsMissing, File resultFile) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.writeValue(resultFile, methodsMissing);
