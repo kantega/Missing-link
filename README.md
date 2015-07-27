@@ -36,12 +36,7 @@ The plugin can be configured with the following parameters:
 * *ignoreElApi* (default: true) - ignore that references to javax.el are not present on the class path.
 * *ignoreAnnotationReferences* (default: true) - ignore references to annotations.
 * *reportDirectory* (default:${project.build.directory}/missing-link)
-* *writeSeenAndVisitedToFile* (default:false) - write all seen, and all referenced classes and methods to files in *reportDirectory*. 
-  * *classes-referenced.json* - FQN of all classes and methods referenced, and the classes where they where referenced.
-  * *methods-referenced.json* - FQN of all methods refrenced, and in which methods they where referenced.
-  * *methods-visited.txt* - FQN of all methods visited.
-  * *classes-visited.txt* - FQN of all methods visited.
-  * *call-paths.txt* - All call paths ending in a missing method.
+* [*writeSeenAndVisitedToFile*](#writeseenandvisitedtofile) (default:false) - write all seen, and all referenced classes and methods to files in *reportDirectory*. 
 * *ignoredPackages* (no default) - packages that should be ignored when generating report over missing classes and methods.
 ```xml
         <ignoredPackages>
@@ -55,6 +50,26 @@ The plugin can be configured with the following parameters:
         </ignoreReferencesInPackages>
 ```
 
+## Output produced by the tool
+When the tool is finished analyzing the classes it will print «No missing methods» and «No missing classes» if all referenced classes and methods 
+was found when doing to analysis.
+Otherwise it will print «Missing classes detected. Reports can be found in *reportDirectory*», and the likewise for missing methods. 
+If the configuration parameter *failOnMissing* is activated missing classes and methods will fail the build.
+
+The files that are produced by default are:
+* *missing-links-report.txt* - This is a summary report listing what packages was ignored, 
+which classes was missing and what methods was missing.
+* *missing-classes.json* and *missing-methods.json* - All classes and methods respectively considered missing. The JSON structure 
+is a object with the missing class/method as key, and its value is an array of all other classes/methods referencing it.
+
+### writeSeenAndVisitedToFile
+When the configuration parameter *writeSeenAndVisitedToFile* is activated the following files are also created in *reportDirectory*: 
+* *classes-referenced.json* - FQN of all classes and methods referenced, and the classes where they where referenced.
+* *methods-referenced.json* - FQN of all methods refrenced, and in which methods they where referenced.
+* *methods-visited.txt* - FQN of all methods visited.
+* *classes-visited.txt* - FQN of all methods visited.
+* *call-paths.txt* - All call paths ending in a missing method.
+  
 ## Notes
 * When running the tool with a class path containg frameworks like Spring, you will most likely get lots of missing classes and methods. 
 For instance the *spring-web* dependency is compiled with view technologies like Velocity, Tiles, JSF, and many more. These are marked as optional, 
