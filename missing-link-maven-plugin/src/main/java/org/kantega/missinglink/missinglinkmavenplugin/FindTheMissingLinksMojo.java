@@ -20,6 +20,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -48,6 +49,13 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
 
     @Parameter( defaultValue = "${project}", readonly = true )
     private MavenProject project;
+
+    /**
+     * If set to true the build will fail if there are missing classes and methods.
+     * Default value is false.
+     */
+    @Parameter(defaultValue = "false")
+    private boolean failOnMissing;
 
     /**
      * Most webapplication have the Servlet API as a dependency. It should be declared with scope «provided»,
@@ -132,21 +140,26 @@ public class FindTheMissingLinksMojo extends AbstractMojo {
             Report report = new ClassFileVisitor().generateReportForJar(paths, ignoredPackages, ignoreReferencesInPackages, ignoreAnnotationReferences);
 
             Map<String, Set<String>> methodsMissing = report.getMethodsMissing();
-            if(methodsMissing.isEmpty()){
+            boolean noMethodsMissing = methodsMissing.isEmpty();
+            if(noMethodsMissing){
                 log.info("No missing methods");
             } else {
                 log.warn("Missing methods detected. Reports can be found in " + reportDirectory.getAbsolutePath());
             }
 
             Map<String, Set<String>> classesMissing = report.getClassesMissing();
-            if(classesMissing.isEmpty()){
+            boolean noClassesMissing = classesMissing.isEmpty();
+            if(noClassesMissing){
                 log.info("No missing classes");
             } else {
                 log.warn("Missing classes detected. Reports can be found in " + reportDirectory.getAbsolutePath());
             }
             writeReport(report, classesMissing, methodsMissing, ignoredPackages);
 
-        } catch (Exception e) {
+            if(failOnMissing && (!noMethodsMissing || !noClassesMissing)){
+                throw new MojoFailureException("Missing classes or methods detected. Reports can be found in " + reportDirectory.getAbsolutePath());
+            }
+        } catch (IOException | URISyntaxException e) {
             throw new MojoExecutionException("IO-problems", e);
         }
     }
